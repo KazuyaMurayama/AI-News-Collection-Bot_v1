@@ -131,19 +131,19 @@ class TestGenerateReactionUrl:
     def test_basic_url(self):
         """基本的なリアクション URL 生成"""
         url = generate_reaction_url(
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
             date="2026-02-25",
             story_id=1,
             reaction_type="excellent",
         )
-        assert url == "http://localhost:8080/react?date=2026-02-25&story=1&reaction=excellent"
+        assert url == "http://localhost:8321/react?date=2026-02-25&story=1&reaction=excellent"
 
     def test_all_reaction_types(self):
         """全リアクション種別の URL 生成"""
-        reaction_types = ["excellent", "good", "meh", "bookmark"]
+        reaction_types = ["excellent", "good", "so_so", "read_later"]
         for rtype in reaction_types:
             url = generate_reaction_url(
-                base_url="http://localhost:8080",
+                base_url="http://localhost:8321",
                 date="2026-02-25",
                 story_id=2,
                 reaction_type=rtype,
@@ -165,7 +165,7 @@ class TestGenerateReactionUrl:
         """ストーリー ID の範囲"""
         for story_id in [1, 2, 3]:
             url = generate_reaction_url(
-                base_url="http://localhost:8080",
+                base_url="http://localhost:8321",
                 date="2026-02-25",
                 story_id=story_id,
                 reaction_type="excellent",
@@ -182,7 +182,7 @@ class TestPrepareStoryContext:
         ctx = _prepare_story_context(
             story=story,
             date="2026-02-25",
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
         )
         assert ctx["id"] == 1
         assert ctx["title"] == "AIが医療を革新する新技術"
@@ -201,13 +201,13 @@ class TestPrepareStoryContext:
         ctx = _prepare_story_context(
             story=story,
             date="2026-02-25",
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
         )
         reaction_types = [r["type"] for r in ctx["reactions"]]
-        assert reaction_types == ["excellent", "good", "meh", "bookmark"]
+        assert reaction_types == ["excellent", "good", "so_so", "read_later"]
 
         for reaction in ctx["reactions"]:
-            assert "http://localhost:8080/react?" in reaction["url"]
+            assert "http://localhost:8321/react?" in reaction["url"]
             assert "date=2026-02-25" in reaction["url"]
             assert "story=1" in reaction["url"]
 
@@ -215,7 +215,7 @@ class TestPrepareStoryContext:
 class TestApplyEmailTemplate:
     """apply_email_template 関数のテスト"""
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8080")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
     def test_basic_template_rendering(self, mock_base_url):
         """基本的なテンプレートレンダリング"""
         stories = _sample_stories()
@@ -223,7 +223,7 @@ class TestApplyEmailTemplate:
             html_body="",
             date="2026-02-25",
             stories=stories,
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
             insight="今日のAIニュースでは医療とLLMが注目されています。",
         )
         # HTML として有効であること
@@ -235,7 +235,7 @@ class TestApplyEmailTemplate:
         for story in stories:
             assert story["title"] in html
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8080")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
     def test_reaction_buttons_present(self, mock_base_url):
         """リアクションボタンが含まれること"""
         stories = _sample_stories()[:1]
@@ -243,15 +243,15 @@ class TestApplyEmailTemplate:
             html_body="",
             date="2026-02-25",
             stories=stories,
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
         )
         # リアクションリンクが含まれていること
         assert "reaction=excellent" in html
         assert "reaction=good" in html
-        assert "reaction=meh" in html
-        assert "reaction=bookmark" in html
+        assert "reaction=so_so" in html
+        assert "reaction=read_later" in html
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8080")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
     def test_responsive_meta_tags(self, mock_base_url):
         """レスポンシブデザイン用のメタタグが含まれること"""
         stories = _sample_stories()[:1]
@@ -259,12 +259,12 @@ class TestApplyEmailTemplate:
             html_body="",
             date="2026-02-25",
             stories=stories,
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
         )
         assert "viewport" in html
         assert "width=device-width" in html
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8080")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
     def test_dark_mode_support(self, mock_base_url):
         """ダークモード対応 CSS が含まれること"""
         stories = _sample_stories()[:1]
@@ -272,12 +272,12 @@ class TestApplyEmailTemplate:
             html_body="",
             date="2026-02-25",
             stories=stories,
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
         )
         assert "prefers-color-scheme: dark" in html
         assert "color-scheme" in html
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8080")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
     def test_insight_section(self, mock_base_url):
         """Today's Insight セクションが表示されること"""
         stories = _sample_stories()[:1]
@@ -286,13 +286,13 @@ class TestApplyEmailTemplate:
             html_body="",
             date="2026-02-25",
             stories=stories,
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
             insight=insight_text,
         )
         assert "Today&#39;s Insight" in html or "Today's Insight" in html or "Insight" in html
         assert "医療分野" in html
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8080")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
     def test_no_insight_when_none(self, mock_base_url):
         """insight が None の場合はセクションが表示されないこと"""
         stories = _sample_stories()[:1]
@@ -300,14 +300,14 @@ class TestApplyEmailTemplate:
             html_body="",
             date="2026-02-25",
             stories=stories,
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
             insight=None,
         )
         # Insight セクションのタイトルが無いことを確認
         # (テンプレートの {% if insight %} で非表示)
         assert "Today&#39;s Insight" not in html
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8080")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
     def test_source_links(self, mock_base_url):
         """元記事リンクが含まれること"""
         stories = _sample_stories()[:1]
@@ -315,18 +315,18 @@ class TestApplyEmailTemplate:
             html_body="",
             date="2026-02-25",
             stories=stories,
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
         )
         assert "https://techcrunch.com/example-1" in html
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8080")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
     def test_empty_stories(self, mock_base_url):
         """空のストーリーリストでもエラーにならないこと"""
         html = apply_email_template(
             html_body="",
             date="2026-02-25",
             stories=[],
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
         )
         assert "<!DOCTYPE html>" in html
         assert "2026-02-25" in html
@@ -340,8 +340,8 @@ class TestReactionsDefinition:
         types = [r["type"] for r in REACTIONS]
         assert "excellent" in types
         assert "good" in types
-        assert "meh" in types
-        assert "bookmark" in types
+        assert "so_so" in types
+        assert "read_later" in types
 
     def test_reaction_has_required_fields(self):
         """各リアクションに必要なフィールドが含まれること"""
@@ -480,7 +480,7 @@ class TestExtractSummary:
 class TestReactionLinkIntegration:
     """リアクションリンク生成の統合テスト"""
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8080")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
     def test_reaction_links_format_in_html(self, mock_base_url):
         """HTML メール内のリアクションリンクが正しいフォーマットであること"""
         stories = _sample_stories()
@@ -488,15 +488,15 @@ class TestReactionLinkIntegration:
             html_body="",
             date="2026-02-25",
             stories=stories,
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
         )
 
         # 各ストーリーの各リアクションリンクが正しいフォーマットであることを確認
         # Jinja2 テンプレートでは href 属性内の & はそのまま出力される
         for story in stories:
             story_id = story["id"]
-            for rtype in ["excellent", "good", "meh", "bookmark"]:
-                expected_url = f"http://localhost:8080/react?date=2026-02-25&story={story_id}&reaction={rtype}"
+            for rtype in ["excellent", "good", "so_so", "read_later"]:
+                expected_url = f"http://localhost:8321/react?date=2026-02-25&story={story_id}&reaction={rtype}"
                 assert expected_url in html, (
                     f"Expected reaction URL not found: story={story_id}, reaction={rtype}"
                 )
@@ -504,18 +504,18 @@ class TestReactionLinkIntegration:
     def test_reaction_url_pattern(self):
         """リアクション URL のパターンが仕様通りであること"""
         url = generate_reaction_url(
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
             date="2026-02-25",
             story_id=1,
             reaction_type="excellent",
         )
-        # architecture.md のパターン: http://localhost:8080/react?date={YYYY-MM-DD}&story={1-3}&reaction={type}
-        pattern = r"^http://localhost:\d+/react\?date=\d{4}-\d{2}-\d{2}&story=\d+&reaction=(excellent|good|meh|bookmark)$"
+        # architecture.md のパターン: http://localhost:8321/react?date={YYYY-MM-DD}&story={1-3}&reaction={type}
+        pattern = r"^http://localhost:\d+/react\?date=\d{4}-\d{2}-\d{2}&story=\d+&reaction=(excellent|good|so_so|read_later)$"
         assert re.match(pattern, url), f"URL pattern mismatch: {url}"
 
     def test_reaction_mapping_completeness(self):
         """リアクションの種別と architecture.md の定義が一致すること"""
         # architecture.md: excellent(5), good(4), bookmark(3), meh(2)
-        expected_types = {"excellent", "good", "bookmark", "meh"}
+        expected_types = {"excellent", "good", "so_so", "read_later"}
         actual_types = {r["type"] for r in REACTIONS}
         assert actual_types == expected_types

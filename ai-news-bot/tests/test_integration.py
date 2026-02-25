@@ -59,7 +59,7 @@ def _minimal_config() -> dict:
         },
         "feedback_server": {
             "host": "127.0.0.1",
-            "port": 8080,
+            "port": 8321,
         },
         "knowledge_base": {
             "daily_dir": "./knowledge_base/daily",
@@ -169,35 +169,41 @@ def _create_sample_md(daily_dir: Path, date: str = "2026-02-25") -> Path:
           - id: 1
             title: "Claude 4が登場"
             source: "TechCrunch"
-            url: "https://example.com/article1"
+            source_url: "https://example.com/article1"
             category: "海外テック"
             tags:
               - "LLM"
               - "Agent"
-            rating: null
-            reaction: null
-            reacted_at: null
+            reactions:
+              excellent: 0
+              good: 0
+              so_so: 0
+              read_later: 0
           - id: 2
             title: "日本企業のAI活用"
             source: "日経クロステック"
-            url: "https://example.com/article2"
+            source_url: "https://example.com/article2"
             category: "国内テック"
             tags:
               - "業務効率化"
               - "RAG"
-            rating: null
-            reaction: null
-            reacted_at: null
+            reactions:
+              excellent: 0
+              good: 0
+              so_so: 0
+              read_later: 0
           - id: 3
             title: "画像生成AIの進化"
             source: "VentureBeat"
-            url: "https://example.com/article3"
+            source_url: "https://example.com/article3"
             category: "マーケティング"
             tags:
               - "画像生成"
-            rating: null
-            reaction: null
-            reacted_at: null
+            reactions:
+              excellent: 0
+              good: 0
+              so_so: 0
+              read_later: 0
         ---
 
         # AI News Daily Report - {date}
@@ -577,12 +583,10 @@ class TestReactionFlowIntegration:
 
         assert result is True
 
-        # MD ファイルの検証
+        # MD ファイルの検証（カウンターベース）
         post = frontmatter.load(str(md_path))
         story = post.metadata["stories"][1]  # id=2 は index 1
-        assert story["reaction"] == "good"
-        assert story["rating"] == 4
-        assert story["reacted_at"] is not None
+        assert story["reactions"]["good"] >= 1
 
     @pytest.mark.asyncio
     async def test_react_all_types_on_same_file(self, tmp_path: Path) -> None:
@@ -594,12 +598,12 @@ class TestReactionFlowIntegration:
 
         # 各ストーリーに異なるリアクションを設定
         reactions = [
-            (1, "excellent", 5),
-            (2, "good", 4),
-            (3, "meh", 2),
+            (1, "excellent"),
+            (2, "good"),
+            (3, "so_so"),
         ]
 
-        for story_id, reaction_type, expected_rating in reactions:
+        for story_id, reaction_type in reactions:
             result = update_reaction(
                 date="2026-02-25",
                 story_id=story_id,
@@ -608,12 +612,11 @@ class TestReactionFlowIntegration:
             )
             assert result is True
 
-        # 全更新が正しく反映されていること
+        # 全更新が正しく反映されていること（カウンターベース）
         post = frontmatter.load(str(md_path))
-        for i, (story_id, reaction_type, expected_rating) in enumerate(reactions):
+        for i, (story_id, reaction_type) in enumerate(reactions):
             story = post.metadata["stories"][i]
-            assert story["reaction"] == reaction_type
-            assert story["rating"] == expected_rating
+            assert story["reactions"][reaction_type] >= 1
 
 
 # ============================================================
@@ -763,7 +766,7 @@ class TestZeroArticleFallback:
         text = format_for_line([])
         assert "本日のAIニュースはありません" in text
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8080")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
     def test_email_template_empty_stories(self, mock_base_url: MagicMock) -> None:
         """メールテンプレートが空ストーリーで正常に動作すること。"""
         from src.delivery.html_converter import apply_email_template
@@ -772,7 +775,7 @@ class TestZeroArticleFallback:
             html_body="",
             date="2026-02-25",
             stories=[],
-            base_url="http://localhost:8080",
+            base_url="http://localhost:8321",
         )
         assert "<!DOCTYPE html>" in html
         assert "2026-02-25" in html
@@ -918,7 +921,7 @@ class TestDuplicateReactionUpdates:
     """既存MDファイルへの重複リアクション更新テスト。"""
 
     def test_overwrite_reaction(self, tmp_path: Path) -> None:
-        """同じストーリーに2回リアクションを設定すると後の値で上書きされること。"""
+        """同じストーリーに2回リアクションを設定するとカウンターが累積されること。"""
         from src.feedback.updater import update_reaction
 
         daily_dir = tmp_path / "knowledge_base" / "daily"
@@ -934,26 +937,20 @@ class TestDuplicateReactionUpdates:
         assert result1 is True
 
         post1 = frontmatter.load(str(md_path))
-        assert post1.metadata["stories"][0]["reaction"] == "excellent"
-        assert post1.metadata["stories"][0]["rating"] == 5
-        first_reacted_at = post1.metadata["stories"][0]["reacted_at"]
+        assert post1.metadata["stories"][0]["reactions"]["excellent"] >= 1
 
-        # 2回目: meh で上書き
+        # 2回目: so_so を追加
         result2 = update_reaction(
             date="2026-02-25",
             story_id=1,
-            reaction_type="meh",
+            reaction_type="so_so",
             daily_dir=daily_dir,
         )
         assert result2 is True
 
         post2 = frontmatter.load(str(md_path))
-        assert post2.metadata["stories"][0]["reaction"] == "meh"
-        assert post2.metadata["stories"][0]["rating"] == 2
-        second_reacted_at = post2.metadata["stories"][0]["reacted_at"]
-
-        # reacted_at が更新されていること
-        assert second_reacted_at is not None
+        assert post2.metadata["stories"][0]["reactions"]["excellent"] >= 1
+        assert post2.metadata["stories"][0]["reactions"]["so_so"] >= 1
 
     def test_update_preserves_other_stories(self, tmp_path: Path) -> None:
         """1つのストーリーを更新しても他のストーリーが影響を受けないこと。"""
@@ -973,14 +970,12 @@ class TestDuplicateReactionUpdates:
         post = frontmatter.load(str(md_path))
 
         # story 1 は更新されている
-        assert post.metadata["stories"][0]["reaction"] == "excellent"
-        assert post.metadata["stories"][0]["rating"] == 5
+        assert post.metadata["stories"][0]["reactions"]["excellent"] >= 1
 
-        # story 2, 3 は未変更
-        assert post.metadata["stories"][1]["reaction"] is None
-        assert post.metadata["stories"][1]["rating"] is None
-        assert post.metadata["stories"][2]["reaction"] is None
-        assert post.metadata["stories"][2]["rating"] is None
+        # story 2, 3 は未変更（カウンターが全て0のまま）
+        for key in ["excellent", "good", "so_so", "read_later"]:
+            assert post.metadata["stories"][1]["reactions"][key] == 0
+            assert post.metadata["stories"][2]["reactions"][key] == 0
 
     def test_update_preserves_body_content(self, tmp_path: Path) -> None:
         """リアクション更新がMarkdown本文を変更しないこと。"""
@@ -1018,18 +1013,15 @@ class TestDuplicateReactionUpdates:
         update_reaction("2026-02-25", 1, "excellent", daily_dir)
         # story 2 -> good
         update_reaction("2026-02-25", 2, "good", daily_dir)
-        # story 3 -> bookmark
-        update_reaction("2026-02-25", 3, "bookmark", daily_dir)
+        # story 3 -> read_later
+        update_reaction("2026-02-25", 3, "read_later", daily_dir)
 
         post = frontmatter.load(str(md_path))
         stories = post.metadata["stories"]
 
-        assert stories[0]["reaction"] == "excellent"
-        assert stories[0]["rating"] == 5
-        assert stories[1]["reaction"] == "good"
-        assert stories[1]["rating"] == 4
-        assert stories[2]["reaction"] == "bookmark"
-        assert stories[2]["rating"] == 3
+        assert stories[0]["reactions"]["excellent"] >= 1
+        assert stories[1]["reactions"]["good"] >= 1
+        assert stories[2]["reactions"]["read_later"] >= 1
 
 
 # ============================================================
@@ -1085,24 +1077,27 @@ class TestKnowledgeIntegration:
     def test_search_after_reaction_update(self, tmp_path: Path) -> None:
         """リアクション更新後に search で更新内容が反映されること。"""
         from src.feedback.updater import update_reaction
-        from src.knowledge.search import get_all_articles, filter_by_rating
+        from src.knowledge.search import get_all_articles
 
         daily_dir = tmp_path / "knowledge_base" / "daily"
         _create_sample_md(daily_dir, date="2026-02-25")
 
-        # 更新前: 高評価記事なし
-        rated_before = filter_by_rating(min_rating=4, daily_dir=daily_dir)
-        assert len(rated_before) == 0
+        # 更新前: 全カウンターが0
+        articles_before = get_all_articles(daily_dir=daily_dir)
+        for article in articles_before:
+            reactions = article.get("reactions", {})
+            assert reactions.get("excellent", 0) == 0
 
         # リアクション更新
         update_reaction("2026-02-25", 1, "excellent", daily_dir)
         update_reaction("2026-02-25", 2, "good", daily_dir)
 
-        # 更新後: 高評価記事が2件
-        rated_after = filter_by_rating(min_rating=4, daily_dir=daily_dir)
-        assert len(rated_after) == 2
-        assert rated_after[0]["rating"] == 5
-        assert rated_after[1]["rating"] == 4
+        # 更新後: カウンターが反映されていること
+        articles_after = get_all_articles(daily_dir=daily_dir)
+        story1 = [a for a in articles_after if a.get("id") == 1][0]
+        story2 = [a for a in articles_after if a.get("id") == 2][0]
+        assert story1["reactions"]["excellent"] >= 1
+        assert story2["reactions"]["good"] >= 1
 
     def test_tag_search_on_generated_md(self, tmp_path: Path) -> None:
         """生成したMDファイルに対するタグ検索が動作すること。"""
@@ -1227,7 +1222,7 @@ class TestAdditionalEdgeCases:
         """REACTION_MAP に全リアクション種別が定義されていること。"""
         from src.feedback.updater import REACTION_MAP
 
-        expected_types = {"excellent", "good", "bookmark", "meh"}
+        expected_types = {"excellent", "good", "so_so", "read_later"}
         assert set(REACTION_MAP.keys()) == expected_types
 
         for reaction_type, info in REACTION_MAP.items():

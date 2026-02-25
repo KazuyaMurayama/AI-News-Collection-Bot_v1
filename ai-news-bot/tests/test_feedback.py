@@ -39,36 +39,42 @@ _SAMPLE_FRONTMATTER_MD = textwrap.dedent("""\
       - id: 1
         title: "Claude 4が登場、驚異的な性能向上"
         source: "TechCrunch"
-        url: "https://example.com/article1"
+        source_url: "https://example.com/article1"
         category: "海外テック"
         tags:
           - "LLM"
           - "Agent"
-        rating: null
-        reaction: null
-        reacted_at: null
+        reactions:
+          excellent: 0
+          good: 0
+          so_so: 0
+          read_later: 0
       - id: 2
         title: "日本企業のAI活用最前線"
         source: "日経クロステック"
-        url: "https://example.com/article2"
+        source_url: "https://example.com/article2"
         category: "国内テック"
         tags:
           - "業務効率化"
           - "RAG"
-        rating: null
-        reaction: null
-        reacted_at: null
+        reactions:
+          excellent: 0
+          good: 0
+          so_so: 0
+          read_later: 0
       - id: 3
         title: "画像生成AIで広告クリエイティブ革命"
         source: "VentureBeat"
-        url: "https://example.com/article3"
+        source_url: "https://example.com/article3"
         category: "マーケティング"
         tags:
           - "画像生成"
           - "マーケティング"
-        rating: null
-        reaction: null
-        reacted_at: null
+        reactions:
+          excellent: 0
+          good: 0
+          so_so: 0
+          read_later: 0
     ---
 
     # AI News Daily Report - {date}
@@ -173,7 +179,7 @@ class TestUpdateReaction:
     """update_reaction() 関数のテスト。"""
 
     def test_update_excellent_reaction(self, tmp_path: Path) -> None:
-        """excellent リアクションで rating=5, reaction='excellent' に更新されること。"""
+        """excellent リアクションでカウンターがインクリメントされること。"""
         daily_dir = _create_sample_md(tmp_path)
 
         result = update_reaction(
@@ -190,12 +196,10 @@ class TestUpdateReaction:
         md_path = daily_dir / "2026-02-25_ai_news.md"
         post = frontmatter.load(str(md_path))
         story = post.metadata["stories"][0]
-        assert story["reaction"] == "excellent"
-        assert story["rating"] == 5
-        assert story["reacted_at"] is not None
+        assert story["reactions"]["excellent"] >= 1
 
     def test_update_good_reaction(self, tmp_path: Path) -> None:
-        """good リアクションで rating=4 に更新されること。"""
+        """good リアクションでカウンターがインクリメントされること。"""
         daily_dir = _create_sample_md(tmp_path)
 
         result = update_reaction(
@@ -211,17 +215,16 @@ class TestUpdateReaction:
         md_path = daily_dir / "2026-02-25_ai_news.md"
         post = frontmatter.load(str(md_path))
         story = post.metadata["stories"][1]
-        assert story["reaction"] == "good"
-        assert story["rating"] == 4
+        assert story["reactions"]["good"] >= 1
 
-    def test_update_bookmark_reaction(self, tmp_path: Path) -> None:
-        """bookmark リアクションで rating=3 に更新されること。"""
+    def test_update_read_later_reaction(self, tmp_path: Path) -> None:
+        """read_later リアクションでカウンターがインクリメントされること。"""
         daily_dir = _create_sample_md(tmp_path)
 
         result = update_reaction(
             date="2026-02-25",
             story_id=3,
-            reaction_type="bookmark",
+            reaction_type="read_later",
             daily_dir=daily_dir,
         )
 
@@ -231,17 +234,16 @@ class TestUpdateReaction:
         md_path = daily_dir / "2026-02-25_ai_news.md"
         post = frontmatter.load(str(md_path))
         story = post.metadata["stories"][2]
-        assert story["reaction"] == "bookmark"
-        assert story["rating"] == 3
+        assert story["reactions"]["read_later"] >= 1
 
-    def test_update_meh_reaction(self, tmp_path: Path) -> None:
-        """meh リアクションで rating=2 に更新されること。"""
+    def test_update_so_so_reaction(self, tmp_path: Path) -> None:
+        """so_so リアクションでカウンターがインクリメントされること。"""
         daily_dir = _create_sample_md(tmp_path)
 
         result = update_reaction(
             date="2026-02-25",
             story_id=1,
-            reaction_type="meh",
+            reaction_type="so_so",
             daily_dir=daily_dir,
         )
 
@@ -251,8 +253,7 @@ class TestUpdateReaction:
         md_path = daily_dir / "2026-02-25_ai_news.md"
         post = frontmatter.load(str(md_path))
         story = post.metadata["stories"][0]
-        assert story["reaction"] == "meh"
-        assert story["rating"] == 2
+        assert story["reactions"]["so_so"] >= 1
 
     def test_invalid_reaction_type_raises(self, tmp_path: Path) -> None:
         """不正な reaction_type で ValueError が発生すること。"""

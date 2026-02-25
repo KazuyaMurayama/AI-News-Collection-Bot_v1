@@ -19,10 +19,10 @@ logger = setup_logger(__name__)
 
 # リアクション種別と rating の対応マッピング
 REACTION_MAP: dict[str, dict[str, Any]] = {
-    "excellent": {"emoji": "\u2b50", "label": "\u7d20\u6674\u3089\u3057\u3044", "rating": 5},
-    "good":      {"emoji": "\ud83d\udc4d", "label": "\u826f\u3044", "rating": 4},
-    "bookmark":  {"emoji": "\ud83d\udccc", "label": "\u5f8c\u3067\u8aad\u3080", "rating": 3},
-    "meh":       {"emoji": "\ud83e\udd14", "label": "\u5fae\u5999", "rating": 2},
+    "excellent":   {"emoji": "⭐", "label": "素晴らしい", "rating": 5},
+    "good":        {"emoji": "👍", "label": "良い", "rating": 4},
+    "read_later":  {"emoji": "📌", "label": "後で読む", "rating": 3},
+    "so_so":       {"emoji": "🤔", "label": "微妙", "rating": 2},
 }
 
 # ファイル単位のロック管理
@@ -159,23 +159,36 @@ def update_reaction(
                 )
                 return False
 
-            # リアクション情報の更新
-            reaction_info = REACTION_MAP[reaction_type]
+            # リアクション情報の更新（カウンターベース）
             now_jst = datetime.now(_JST).isoformat()
 
-            target_story["reaction"] = reaction_type
-            target_story["rating"] = reaction_info["rating"]
-            target_story["reacted_at"] = now_jst
+            # stories[].reactions のカウンターをインクリメント
+            reactions = target_story.get("reactions", {
+                "excellent": 0, "good": 0, "so_so": 0, "read_later": 0,
+            })
+            if not isinstance(reactions, dict):
+                reactions = {"excellent": 0, "good": 0, "so_so": 0, "read_later": 0}
+            reactions[reaction_type] = reactions.get(reaction_type, 0) + 1
+            target_story["reactions"] = reactions
+
+            # total_reactions の更新
+            total_reactions = metadata.get("total_reactions", {
+                "excellent": 0, "good": 0, "so_so": 0, "read_later": 0,
+            })
+            if not isinstance(total_reactions, dict):
+                total_reactions = {"excellent": 0, "good": 0, "so_so": 0, "read_later": 0}
+            total_reactions[reaction_type] = total_reactions.get(reaction_type, 0) + 1
+            metadata["total_reactions"] = total_reactions
 
             # ファイルに書き戻し
             frontmatter.dump(post, str(md_path))
 
             logger.info(
-                "リアクション更新完了: date=%s, story=%d, reaction=%s, rating=%d",
+                "リアクション更新完了: date=%s, story=%d, reaction=%s, count=%d",
                 date,
                 story_id,
                 reaction_type,
-                reaction_info["rating"],
+                reactions[reaction_type],
             )
             return True
 

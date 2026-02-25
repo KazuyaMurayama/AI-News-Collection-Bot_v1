@@ -424,11 +424,10 @@ class TestBuildFrontmatterMetadata:
         assert story_meta["id"] == 1
         assert story_meta["title"] == "テスト記事"
         assert story_meta["source"] == "TechCrunch"
-        assert story_meta["url"] == "https://example.com"
-        assert story_meta["category"] == "業務効率化"
+        assert story_meta["source_url"] == "https://example.com"
+        assert "framework" in story_meta
         assert story_meta["tags"] == ["AI"]
-        assert story_meta["rating"] is None
-        assert story_meta["reaction"] is None
+        assert story_meta["reactions"] == {"excellent": 0, "good": 0, "so_so": 0, "read_later": 0}
 
     def test_empty_stories_list(self) -> None:
         """ストーリーが空の場合でもメタデータが生成されること。"""
@@ -529,11 +528,10 @@ class TestGenerateDailyMarkdown:
         assert story_meta["id"] == 1
         assert story_meta["title"] == "AIニュース"
         assert story_meta["source"] == "TechCrunch"
-        assert story_meta["url"] == "https://example.com/1"
-        assert story_meta["category"] == "業務効率化"
+        assert story_meta["source_url"] == "https://example.com/1"
+        assert "framework" in story_meta
         assert story_meta["tags"] == ["AI", "自動化"]
-        assert story_meta["rating"] is None
-        assert story_meta["reaction"] is None
+        assert story_meta["reactions"] == {"excellent": 0, "good": 0, "so_so": 0, "read_later": 0}
 
     def test_body_contains_all_sections(self) -> None:
         """Markdown 本文に全セクションが含まれること。"""

@@ -24,10 +24,10 @@ _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "writer" / "templates"
 
 # リアクション定義
 REACTIONS = [
-    {"type": "excellent", "emoji": "\u2b50", "label": "\u7d20\u6674\u3089\u3057\u3044", "color": "#ffd700", "text_color": "#7c6200"},
-    {"type": "good",      "emoji": "\U0001f44d", "label": "\u826f\u3044",         "color": "#4caf50", "text_color": "#ffffff"},
-    {"type": "meh",       "emoji": "\U0001f914", "label": "\u5fae\u5999",         "color": "#ff9800", "text_color": "#ffffff"},
-    {"type": "bookmark",  "emoji": "\U0001f4cc", "label": "\u5f8c\u3067\u8aad\u3080",   "color": "#2196f3", "text_color": "#ffffff"},
+    {"type": "excellent",   "emoji": "⭐", "label": "素晴らしい", "color": "#ffd700", "text_color": "#7c6200"},
+    {"type": "good",        "emoji": "👍", "label": "良い",       "color": "#4caf50", "text_color": "#ffffff"},
+    {"type": "so_so",       "emoji": "🤔", "label": "微妙",       "color": "#ff9800", "text_color": "#ffffff"},
+    {"type": "read_later",  "emoji": "📌", "label": "後で読む",   "color": "#2196f3", "text_color": "#ffffff"},
 ]
 
 
@@ -94,7 +94,7 @@ def generate_reaction_url(base_url: str, date: str, story_id: int, reaction_type
     """リアクション URL を生成する。
 
     Args:
-        base_url: フィードバックサーバーのベース URL (例: "http://localhost:8080")。
+        base_url: フィードバックサーバーのベース URL (例: "http://localhost:8321")。
         date: 記事の日付 (YYYY-MM-DD)。
         story_id: ストーリー ID (1-3)。
         reaction_type: リアクション種別 (excellent, good, meh, bookmark)。
@@ -228,7 +228,7 @@ def _resolve_base_url() -> str:
         from src.utils.config import load_config
         config = load_config()
         fb = config.get("feedback_server", {})
-        return fb.get("base_url", "http://localhost:8080")
+        return fb.get("base_url", "http://localhost:8321")
     except Exception:
         logger.warning("config.yaml からの base_url 取得に失敗しました。デフォルト値を使用します。")
-        return "http://localhost:8080"
+        return "http://localhost:8321"

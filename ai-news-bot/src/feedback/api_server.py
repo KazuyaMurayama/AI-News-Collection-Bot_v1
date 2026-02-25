@@ -230,6 +230,137 @@ def create_app() -> FastAPI:
         html = _build_thank_you_html(reaction, story, date)
         return HTMLResponse(content=html, status_code=200)
 
+    # --- GET /api/reaction/{date}/{story_id}/{type} (RESTful) ---
+    @app.get("/api/reaction/{date}/{story_id}/{reaction_type}", response_class=HTMLResponse)
+    async def react_restful(
+        date: str,
+        story_id: int,
+        reaction_type: str,
+    ) -> HTMLResponse:
+        """RESTful リアクション受信エンドポイント (要件定義準拠)。"""
+        if reaction_type not in REACTION_MAP:
+            valid_types = ", ".join(REACTION_MAP.keys())
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid reaction type: must be one of {valid_types}",
+            )
+        if not _DATE_PATTERN.match(date):
+            raise HTTPException(status_code=400, detail="Invalid date format")
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid date: {date}")
+        if story_id < 1 or story_id > 3:
+            raise HTTPException(status_code=400, detail="story_id must be 1-3")
+
+        try:
+            success = update_reaction(date=date, story_id=story_id, reaction_type=reaction_type)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail=f"Article not found: {date}, story {story_id}")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update reaction.")
+
+        logger.info("リアクション受信 (RESTful): date=%s, story=%d, reaction=%s", date, story_id, reaction_type)
+        html = _build_thank_you_html(reaction_type, story_id, date)
+        return HTMLResponse(content=html, status_code=200)
+
+    # --- GET /api/stories/{date} ---
+    @app.get("/api/stories/{date}")
+    async def get_stories_by_date(date: str) -> JSONResponse:
+        """指定日のニュース一覧取得。"""
+        if not _DATE_PATTERN.match(date):
+            raise HTTPException(status_code=400, detail="Invalid date format")
+        try:
+            from src.knowledge.search import get_all_articles
+            articles = get_all_articles()
+            day_articles = [a for a in articles if str(a.get("date", "")) == date]
+            return JSONResponse(content={"date": date, "stories": day_articles})
+        except Exception as e:
+            logger.error("記事取得失敗: %s", str(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # --- GET /api/stories/{date}/{story_id} ---
+    @app.get("/api/stories/{date}/{story_id}")
+    async def get_story_detail(date: str, story_id: int) -> JSONResponse:
+        """指定ニュースの詳細取得。"""
+        if not _DATE_PATTERN.match(date):
+            raise HTTPException(status_code=400, detail="Invalid date format")
+        try:
+            from src.knowledge.search import get_all_articles
+            articles = get_all_articles()
+            matches = [a for a in articles if str(a.get("date", "")) == date and a.get("id") == story_id]
+            if not matches:
+                raise HTTPException(status_code=404, detail="Story not found")
+            return JSONResponse(content=matches[0])
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("記事詳細取得失敗: %s", str(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # --- GET /api/search ---
+    @app.get("/api/search")
+    async def search_articles(
+        q: str = Query(None, description="全文検索キーワード"),
+        tag: str = Query(None, description="タグ（カンマ区切り）"),
+        min_rating: int = Query(None, description="最低リアクション数", ge=0),
+    ) -> JSONResponse:
+        """ナレッジベース検索。"""
+        try:
+            from src.knowledge.search import get_all_articles, search_by_tag, search_fulltext, filter_by_rating
+            results = None
+            if q:
+                results = search_fulltext(q)
+            elif tag:
+                results = search_by_tag(tag.split(",")[0].strip())
+            else:
+                results = get_all_articles()
+            if min_rating is not None and results is not None:
+                results = [r for r in results if isinstance(r.get("rating"), (int, float)) and r["rating"] >= min_rating]
+            return JSONResponse(content={"total": len(results or []), "results": results or []})
+        except Exception as e:
+            logger.error("検索失敗: %s", str(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # --- GET /api/summary/{year}/{month} ---
+    @app.get("/api/summary/{year}/{month}")
+    async def get_monthly_summary(year: int, month: int) -> JSONResponse:
+        """月次サマリー取得。"""
+        try:
+            from pathlib import Path
+            from src.utils.config import AppConfig
+            config = AppConfig.get_instance()
+            monthly_dir = config.get("knowledge_base.monthly_dir", "./knowledge_base/monthly")
+            summary_path = Path(monthly_dir) / f"{year:04d}-{month:02d}_summary.md"
+            if not summary_path.exists():
+                raise HTTPException(status_code=404, detail=f"Summary not found: {year}-{month:02d}")
+            content = summary_path.read_text(encoding="utf-8")
+            return JSONResponse(content={"year": year, "month": month, "content": content})
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("月次サマリー取得失敗: %s", str(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # --- GET /api/health ---
+    @app.get("/api/health")
+    async def api_health_check() -> JSONResponse:
+        """API ヘルスチェック (/api/health)。"""
+        return JSONResponse(content={
+            "status": "ok",
+            "timestamp": datetime.now(_JST).isoformat(),
+            "version": _get_app_version(),
+        })
+
+    # --- GET /api/stats ---
+    @app.get("/api/stats")
+    async def api_stats() -> JSONResponse:
+        """API 蓄積統計情報 (/api/stats)。"""
+        return await stats()
+
     # --- GET /stats ---
     @app.get("/stats")
     async def stats() -> JSONResponse:
@@ -325,10 +456,10 @@ def run_server(
             if host is None:
                 host = config.get("feedback_server.host", "127.0.0.1")
             if port is None:
-                port = config.get("feedback_server.port", 8080)
+                port = config.get("feedback_server.port", 8321)
         except Exception:
             host = host or "127.0.0.1"
-            port = port or 8080
+            port = port or 8321
 
     app = create_app()
 

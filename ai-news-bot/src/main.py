@@ -128,8 +128,6 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
             ),
             "category": "",
             "tags": [],
-            "rating": None,
-            "reaction": None,
         }
         selected_articles = [fallback_story]
 
@@ -176,10 +174,9 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
                 "summary": article.get("summary", ""),
                 "body": story_text,
                 "story": story_text,
+                "framework": framework,
                 "category": article.get("category", ""),
                 "tags": [],
-                "rating": None,
-                "reaction": None,
             }
             stories.append(story_entry)
         except Exception as e:
@@ -193,10 +190,9 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
                 "summary": article.get("summary", ""),
                 "body": article.get("summary", article.get("body", "")),
                 "story": article.get("summary", article.get("body", "")),
+                "framework": "",
                 "category": article.get("category", ""),
                 "tags": [],
-                "rating": None,
-                "reaction": None,
             })
 
     # ------------------------------------------------------------------

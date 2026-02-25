@@ -123,8 +123,8 @@ delivery:
 # --- リアクションサーバー設定 ---
 feedback_server:
   host: "127.0.0.1"
-  port: 8080
-  base_url: "http://localhost:8080"
+  port: 8321
+  base_url: "http://localhost:8321"
 
 # --- ナレッジベース設定 ---
 knowledge_base:

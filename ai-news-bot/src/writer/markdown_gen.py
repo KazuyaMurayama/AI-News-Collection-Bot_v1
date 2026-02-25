@@ -21,6 +21,7 @@ Frontmatter を付加する。
     ...
 """
 
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,8 @@ import yaml
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from src.utils.logger import setup_logger
+
+_JST = timezone(timedelta(hours=9))
 
 logger = setup_logger(__name__)
 
@@ -88,18 +91,29 @@ def _build_frontmatter_metadata(
             "id": story.get("id", 0),
             "title": story.get("title", ""),
             "source": story.get("source", ""),
-            "url": story.get("url", ""),
-            "category": story.get("category", ""),
+            "source_url": story.get("url", ""),
+            "framework": story.get("framework", ""),
             "tags": story.get("tags", []),
-            "rating": story.get("rating"),
-            "reaction": story.get("reaction"),
+            "reactions": {
+                "excellent": 0,
+                "good": 0,
+                "so_so": 0,
+                "read_later": 0,
+            },
         }
         stories_meta.append(story_meta)
 
     return {
         "date": date,
+        "generation_timestamp": datetime.now(_JST).isoformat(),
         "tags": all_tags,
         "stories": stories_meta,
+        "total_reactions": {
+            "excellent": 0,
+            "good": 0,
+            "so_so": 0,
+            "read_later": 0,
+        },
     }
 
 

@@ -1,0 +1,55 @@
+# ============================================================
+# AI News Collector Bot - .gitignore
+# ============================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+eggs/
+*.whl
+
+# --- 仮想環境 ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- 秘密情報 ---
+.env
+credentials/
+*.json
+!.env.example
+
+# ただし knowledge_base の JSON は追跡する
+!knowledge_base/**/*.json
+
+# --- ログ ---
+logs/*.log
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- pytest ---
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# --- mypy ---
+.mypy_cache/
+
+# --- その他 ---
+*.bak
+*.tmp

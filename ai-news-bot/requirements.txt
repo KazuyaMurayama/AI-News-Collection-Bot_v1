@@ -1,0 +1,34 @@
+# ============================================================
+# AI News Collector Bot - 依存パッケージ
+# ============================================================
+
+# --- ニュース収集 ---
+feedparser>=6.0.11
+requests>=2.31.0
+beautifulsoup4>=4.12.3
+lxml>=5.1.0
+
+# --- LLM API ---
+anthropic>=0.40.0
+
+# --- 設定・ユーティリティ ---
+PyYAML>=6.0.1
+python-frontmatter>=1.1.0
+python-dotenv>=1.0.1
+
+# --- コンテンツ生成・変換 ---
+Jinja2>=3.1.3
+Markdown>=3.5.2
+
+# --- APIサーバー ---
+fastapi>=0.110.0
+uvicorn>=0.27.1
+
+# --- Gmail API ---
+google-api-python-client>=2.114.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+
+# --- テスト ---
+pytest>=8.0.2
+httpx>=0.27.0

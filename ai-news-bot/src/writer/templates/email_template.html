@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>AI News Daily Digest - {{ date }}</title>
+<style>
+  /* ===== リセット & ベース ===== */
+  body, table, td, a {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+  table, td {
+    mso-table-lspace: 0pt;
+    mso-table-rspace: 0pt;
+  }
+  img {
+    -ms-interpolation-mode: bicubic;
+    border: 0;
+    height: auto;
+    line-height: 100%;
+    outline: none;
+    text-decoration: none;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    width: 100% !important;
+    height: 100% !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans JP', sans-serif;
+    line-height: 1.7;
+  }
+
+  /* ===== ライトモード（デフォルト） ===== */
+  :root {
+    color-scheme: light dark;
+    supported-color-schemes: light dark;
+  }
+  .email-body {
+    background-color: #f0f2f5;
+  }
+  .email-container {
+    background-color: #ffffff;
+  }
+  .header-section {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: #ffffff;
+  }
+  .header-title {
+    color: #ffffff;
+  }
+  .header-subtitle {
+    color: #a0c4ff;
+  }
+  .story-card {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+  }
+  .story-number {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+  }
+  .story-title {
+    color: #1a1a2e;
+  }
+  .story-meta {
+    color: #6b7280;
+  }
+  .story-body {
+    color: #374151;
+  }
+  .source-link {
+    color: #3b82f6;
+  }
+  .insight-section {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left: 5px solid #f59e0b;
+  }
+  .insight-title {
+    color: #92400e;
+  }
+  .insight-body {
+    color: #78350f;
+  }
+  .reaction-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    margin: 4px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 100px;
+  }
+  .btn-excellent {
+    background-color: #ffd700;
+    color: #7c6200;
+  }
+  .btn-good {
+    background-color: #4caf50;
+    color: #ffffff;
+  }
+  .btn-meh {
+    background-color: #ff9800;
+    color: #ffffff;
+  }
+  .btn-bookmark {
+    background-color: #2196f3;
+    color: #ffffff;
+  }
+  .footer-section {
+    background-color: #f8f9fa;
+    color: #6b7280;
+  }
+  .footer-link {
+    color: #3b82f6;
+  }
+  .divider {
+    border-top: 1px solid #e5e7eb;
+  }
+  .category-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background-color: #e0e7ff;
+    color: #3730a3;
+  }
+  .tag-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    background-color: #f3f4f6;
+    color: #6b7280;
+    margin: 2px;
+  }
+
+  /* ===== ダークモード ===== */
+  @media (prefers-color-scheme: dark) {
+    .email-body {
+      background-color: #1a1a2e !important;
+    }
+    .email-container {
+      background-color: #16213e !important;
+    }
+    .story-card {
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+    }
+    .story-title {
+      color: #e2e8f0 !important;
+    }
+    .story-meta {
+      color: #94a3b8 !important;
+    }
+    .story-body {
+      color: #cbd5e1 !important;
+    }
+    .source-link {
+      color: #60a5fa !important;
+    }
+    .insight-section {
+      background: linear-gradient(135deg, #422006 0%, #451a03 100%) !important;
+      border-left-color: #d97706 !important;
+    }
+    .insight-title {
+      color: #fbbf24 !important;
+    }
+    .insight-body {
+      color: #fcd34d !important;
+    }
+    .footer-section {
+      background-color: #0f172a !important;
+      color: #94a3b8 !important;
+    }
+    .footer-link {
+      color: #60a5fa !important;
+    }
+    .divider {
+      border-top-color: #334155 !important;
+    }
+    .category-badge {
+      background-color: #312e81 !important;
+      color: #a5b4fc !important;
+    }
+    .tag-badge {
+      background-color: #1e293b !important;
+      color: #94a3b8 !important;
+    }
+  }
+
+  /* ===== レスポンシブ ===== */
+  @media only screen and (max-width: 600px) {
+    .email-container {
+      width: 100% !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+    }
+    .content-padding {
+      padding: 16px !important;
+    }
+    .header-title {
+      font-size: 22px !important;
+    }
+    .story-title {
+      font-size: 18px !important;
+    }
+    .reaction-btn {
+      padding: 10px 12px !important;
+      font-size: 13px !important;
+      min-width: 80px !important;
+    }
+    .reaction-buttons-row td {
+      display: block !important;
+      width: 100% !important;
+      text-align: center !important;
+      margin-bottom: 4px;
+    }
+  }
+</style>
+</head>
+<body class="email-body" style="margin:0; padding:0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-body">
+<tr>
+<td align="center" style="padding: 20px 10px;">
+
+  <!-- メインコンテナ -->
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="email-container" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+    <!-- ===== ヘッダー ===== -->
+    <tr>
+      <td class="header-section" style="padding: 32px 24px; text-align: center;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="center">
+              <div style="font-size: 32px; margin-bottom: 8px;">&#x1F916;</div>
+              <h1 class="header-title" style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">
+                AI News Daily Digest
+              </h1>
+              <p class="header-subtitle" style="margin: 0; font-size: 15px; font-weight: 400;">
+                {{ date }} | AI&amp;テクノロジーの最前線
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ===== ストーリーセクション ===== -->
+    {% for story in stories %}
+    <tr>
+      <td class="content-padding" style="padding: 24px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="story-card" style="border-radius: 10px; overflow: hidden;">
+
+          <!-- ストーリーヘッダー -->
+          <tr>
+            <td style="padding: 20px 20px 12px 20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="36" valign="top">
+                    <div class="story-number" style="width: 32px; height: 32px; border-radius: 50%; text-align: center; line-height: 32px; font-size: 16px; font-weight: 700;">
+                      {{ story.id }}
+                    </div>
+                  </td>
+                  <td style="padding-left: 12px;" valign="top">
+                    <h2 class="story-title" style="margin: 0 0 6px 0; font-size: 20px; font-weight: 700; line-height: 1.4;">
+                      {{ story.title }}
+                    </h2>
+                    <p class="story-meta" style="margin: 0; font-size: 13px;">
+                      {% if story.category %}
+                      <span class="category-badge">{{ story.category }}</span>
+                      {% endif %}
+                      {% if story.source %}
+                      &nbsp;&middot;&nbsp;{{ story.source }}
+                      {% endif %}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ストーリー本文 -->
+          <tr>
+            <td style="padding: 0 20px 16px 20px;">
+              <div class="story-body" style="font-size: 15px; line-height: 1.8;">
+                {{ story.html_body }}
+              </div>
+              {% if story.url %}
+              <p style="margin: 12px 0 0 0;">
+                <a href="{{ story.url }}" class="source-link" style="font-size: 13px; text-decoration: none;">
+                  &#x1F517; &#20803;&#35352;&#20107;&#12434;&#35501;&#12416;
+                </a>
+              </p>
+              {% endif %}
+              {% if story.tags %}
+              <p style="margin: 10px 0 0 0;">
+                {% for tag in story.tags %}
+                <span class="tag-badge">#{{ tag }}</span>
+                {% endfor %}
+              </p>
+              {% endif %}
+            </td>
+          </tr>
+
+          <!-- リアクションボタン -->
+          <tr>
+            <td style="padding: 0 20px 20px 20px;">
+              <table role="presentation" class="divider" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 16px;">
+                <tr><td style="height: 1px; line-height: 1px; font-size: 1px;">&nbsp;</td></tr>
+              </table>
+              <p class="story-meta" style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                &#12371;&#12398;&#35352;&#20107;&#12398;&#35413;&#20385;
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="reaction-buttons-row">
+                <tr>
+                  <td style="padding-right: 6px;">
+                    <a href="{{ base_url }}/react?date={{ date }}&story={{ story.id }}&reaction=excellent"
+                       class="reaction-btn btn-excellent"
+                       style="display: inline-block; padding: 8px 16px; margin: 4px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; text-align: center; min-width: 100px; background-color: #ffd700; color: #7c6200;">
+                      &#11088; &#32032;&#26228;&#12425;&#12375;&#12356;
+                    </a>
+                  </td>
+                  <td style="padding-right: 6px;">
+                    <a href="{{ base_url }}/react?date={{ date }}&story={{ story.id }}&reaction=good"
+                       class="reaction-btn btn-good"
+                       style="display: inline-block; padding: 8px 16px; margin: 4px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; text-align: center; min-width: 100px; background-color: #4caf50; color: #ffffff;">
+                      &#128077; &#33391;&#12356;
+                    </a>
+                  </td>
+                  <td style="padding-right: 6px;">
+                    <a href="{{ base_url }}/react?date={{ date }}&story={{ story.id }}&reaction=meh"
+                       class="reaction-btn btn-meh"
+                       style="display: inline-block; padding: 8px 16px; margin: 4px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; text-align: center; min-width: 100px; background-color: #ff9800; color: #ffffff;">
+                      &#129300; &#24494;&#22937;
+                    </a>
+                  </td>
+                  <td>
+                    <a href="{{ base_url }}/react?date={{ date }}&story={{ story.id }}&reaction=bookmark"
+                       class="reaction-btn btn-bookmark"
+                       style="display: inline-block; padding: 8px 16px; margin: 4px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; text-align: center; min-width: 100px; background-color: #2196f3; color: #ffffff;">
+                      &#128204; &#24460;&#12391;&#35501;&#12416;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {% endfor %}
+
+    <!-- ===== Today's Insight セクション ===== -->
+    {% if insight %}
+    <tr>
+      <td class="content-padding" style="padding: 0 24px 24px 24px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td class="insight-section" style="padding: 20px; border-radius: 10px;">
+              <h3 class="insight-title" style="margin: 0 0 10px 0; font-size: 17px; font-weight: 700;">
+                &#128161; Today's Insight
+              </h3>
+              <div class="insight-body" style="font-size: 14px; line-height: 1.8;">
+                {{ insight }}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {% endif %}
+
+    <!-- ===== フッター ===== -->
+    <tr>
+      <td class="footer-section" style="padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
+        <p style="margin: 0 0 8px 0; font-size: 13px;">
+          AI News Collector Bot v1.0 | Powered by Claude API
+        </p>
+        <p style="margin: 0; font-size: 12px;">
+          &#12371;&#12398;&#12513;&#12540;&#12523;&#12399;&#33258;&#21205;&#37197;&#20449;&#12373;&#12428;&#12390;&#12356;&#12414;&#12377;&#12290;
+          <a href="{{ base_url }}/health" class="footer-link" style="text-decoration: none;">&#12469;&#12540;&#12496;&#12540;&#12473;&#12486;&#12540;&#12479;&#12473;</a>
+        </p>
+      </td>
+    </tr>
+
+  </table>
+  <!-- /メインコンテナ -->
+
+</td>
+</tr>
+</table>
+</body>
+</html>

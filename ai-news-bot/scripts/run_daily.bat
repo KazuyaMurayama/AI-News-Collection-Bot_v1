@@ -1,46 +1,46 @@
 @echo off
 REM ============================================================
-REM run_daily.bat - AI News Collector Bot 実行バッチファイル
+REM run_daily.bat - AI News Collector Bot runner for Windows
 REM
-REM Windows 環境で仮想環境を有効化して main.py を実行する。
-REM タスクスケジューラからの自動実行にも手動実行にも対応。
+REM Activates venv and runs main.py.
+REM Used by Task Scheduler for daily automatic execution.
 REM ============================================================
 
 setlocal enabledelayedexpansion
 
-REM --- プロジェクトルートの特定 ---
+REM --- Project root ---
 set "SCRIPT_DIR=%~dp0"
 pushd "%SCRIPT_DIR%.."
 set "PROJECT_ROOT=%CD%"
 popd
 
 echo =========================================
-echo AI News Collector Bot - 実行
+echo AI News Collector Bot - Running
 echo =========================================
-echo プロジェクトルート: %PROJECT_ROOT%
-echo 実行日時: %date% %time%
+echo Project Root: %PROJECT_ROOT%
+echo Date/Time:    %date% %time%
 echo.
 
-REM --- ログディレクトリの作成 ---
+REM --- Create logs directory ---
 if not exist "%PROJECT_ROOT%\logs" mkdir "%PROJECT_ROOT%\logs"
 
-REM --- 仮想環境の検出とアクティベート ---
+REM --- Activate venv ---
 set "VENV_ACTIVATE=%PROJECT_ROOT%\venv\Scripts\activate.bat"
 
 if exist "%VENV_ACTIVATE%" (
-    echo [INFO] 仮想環境を有効化しています...
+    echo [INFO] Activating virtual environment...
     call "%VENV_ACTIVATE%"
     set "PYTHON_BIN=python"
 ) else (
-    echo [WARN] 仮想環境が見つかりません。システムのPythonを使用します。
+    echo [WARN] venv not found. Using system Python.
     set "PYTHON_BIN=python"
 )
 
-REM --- 実行 ---
+REM --- Run pipeline ---
 cd /d "%PROJECT_ROOT%"
 set "PYTHONPATH=%PROJECT_ROOT%"
 
-echo [INFO] パイプラインを実行中...
+echo [INFO] Running pipeline...
 echo.
 
 %PYTHON_BIN% -m src.main %*
@@ -49,9 +49,9 @@ set "EXIT_CODE=%ERRORLEVEL%"
 
 echo.
 if %EXIT_CODE% equ 0 (
-    echo [OK] 実行が正常に完了しました。
+    echo [OK] Completed successfully.
 ) else (
-    echo [ERROR] 実行がエラーコード %EXIT_CODE% で終了しました。
+    echo [ERROR] Exited with code %EXIT_CODE%.
 )
 
 endlocal

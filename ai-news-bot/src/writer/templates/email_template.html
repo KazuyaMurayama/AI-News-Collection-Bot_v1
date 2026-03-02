@@ -71,6 +71,12 @@
   .story-body {
     color: #374151;
   }
+  .story-body p, .insight-body p {
+    margin: 0 0 12px 0;
+  }
+  .story-body p:last-child, .insight-body p:last-child {
+    margin-bottom: 0;
+  }
   .source-link {
     color: #3b82f6;
   }
@@ -289,7 +295,7 @@
           <tr>
             <td style="padding: 0 20px 16px 20px;">
               <div class="story-body" style="font-size: 15px; line-height: 1.8;">
-                {{ story.html_body }}
+                {{ story.html_body|safe }}
               </div>
               {% if story.url %}
               <p style="margin: 12px 0 0 0;">
@@ -367,7 +373,7 @@
                 &#128161; Today's Insight
               </h3>
               <div class="insight-body" style="font-size: 14px; line-height: 1.8;">
-                {{ insight }}
+                {{ insight|safe }}
               </div>
             </td>
           </tr>

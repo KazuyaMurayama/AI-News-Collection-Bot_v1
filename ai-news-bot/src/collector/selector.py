@@ -111,12 +111,24 @@ def _parse_scoring_response(response_text: str, num_candidates: int) -> list[dic
         text = response_text.strip()
         if "```json" in text:
             start = text.index("```json") + len("```json")
-            end = text.index("```", start)
-            text = text[start:end].strip()
+            end = text.find("```", start)
+            if end != -1:
+                text = text[start:end].strip()
+            else:
+                text = text[start:].strip()
         elif "```" in text:
             start = text.index("```") + len("```")
-            end = text.index("```", start)
-            text = text[start:end].strip()
+            end = text.find("```", start)
+            if end != -1:
+                text = text[start:end].strip()
+            else:
+                text = text[start:].strip()
+
+        # JSON 配列部分のみを抽出（前後に余計なテキストがある場合に対応）
+        bracket_start = text.find("[")
+        bracket_end = text.rfind("]")
+        if bracket_start != -1 and bracket_end != -1 and bracket_end > bracket_start:
+            text = text[bracket_start:bracket_end + 1]
 
         scores = json.loads(text)
 

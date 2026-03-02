@@ -26,8 +26,8 @@ credentials/
 *.json
 !.env.example
 
-# ただし knowledge_base の JSON は追跡する
-!knowledge_base/**/*.json
+# --- ナレッジベース（実行時生成） ---
+knowledge_base/
 
 # --- ログ ---
 logs/

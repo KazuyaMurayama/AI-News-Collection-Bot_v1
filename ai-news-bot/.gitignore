@@ -30,7 +30,7 @@ credentials/
 !knowledge_base/**/*.json
 
 # --- ログ ---
-logs/*.log
+logs/
 
 # --- IDE ---
 .vscode/

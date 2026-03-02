@@ -1,16 +1,18 @@
 """Gmail配信モジュール
 
-Gmail API を使用したメール配信機能を提供する。
-OAuth2 認証フロー（初回ブラウザ認証 + リフレッシュトークン自動認証）を実装し、
-HTML メールの送信をサポートする。
+Gmail API (OAuth2) または SMTP (アプリパスワード) によるメール配信機能を提供する。
 
-使用ライブラリ:
-- google-auth / google-auth-oauthlib: OAuth2 認証
-- google-api-python-client: Gmail API 操作
+認証方式:
+- smtp (推奨): Gmail アプリパスワードを使った SMTP 送信。セットアップが簡単。
+- oauth2: Google Cloud Project + OAuth2 認証フロー。高度だがセットアップが複雑。
+
+config.yaml の delivery.gmail.auth_method で切り替え可能。
 """
 
 import base64
 import os
+import re
+import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -21,7 +23,7 @@ from src.utils.retry import with_retry
 
 logger = setup_logger(__name__)
 
-# Gmail API のスコープ
+# Gmail API のスコープ (OAuth2 方式で使用)
 _SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
 # デフォルトのトークン保存パス
@@ -40,23 +42,24 @@ class GmailAuthenticationError(GmailSenderError):
 
 
 class GmailSender:
-    """Gmail API によるメール送信クラス。
+    """Gmail によるメール送信クラス。
 
-    OAuth2 認証フローを管理し、HTML メールの送信機能を提供する。
+    SMTP 方式と OAuth2 方式の両方をサポートする。
 
-    認証フロー:
-    1. 初回: ブラウザを開いて Google アカウント認証 -> トークンファイル保存
-    2. 以降: 保存済みトークンファイルから自動認証（リフレッシュトークンで自動更新）
-
-    使用例::
+    SMTP 方式 (推奨)::
 
         sender = GmailSender()
-        sender.authenticate()
+        sender.authenticate()   # SMTP 接続テスト
         sender.send_email(
-            subject="[AI News] 2026-02-25",
+            subject="[AI News] 2026-03-02",
             html_body="<h1>Today's AI News</h1>...",
-            recipients=["user@example.com"],
         )
+
+    OAuth2 方式::
+
+        sender = GmailSender()
+        sender.authenticate()   # ブラウザ認証 or トークン再利用
+        sender.send_email(...)
     """
 
     def __init__(
@@ -65,16 +68,6 @@ class GmailSender:
         credentials_path: str | Path | None = None,
         sender_email: str | None = None,
     ):
-        """GmailSender を初期化する。
-
-        Args:
-            token_path: OAuth2 トークンファイルのパス。
-                None の場合は環境変数 GMAIL_TOKEN_PATH または デフォルトパスを使用。
-            credentials_path: OAuth2 クライアント認証情報ファイルのパス。
-                None の場合は環境変数 GMAIL_CREDENTIALS_PATH またはデフォルトパスを使用。
-            sender_email: 送信元メールアドレス。
-                None の場合は config.yaml の delivery.gmail.sender を使用。
-        """
         self._token_path = Path(
             token_path
             or os.environ.get("GMAIL_TOKEN_PATH", _DEFAULT_TOKEN_PATH)
@@ -84,22 +77,30 @@ class GmailSender:
             or os.environ.get("GMAIL_CREDENTIALS_PATH", _DEFAULT_CREDENTIALS_PATH)
         )
         self._sender_email = sender_email or self._resolve_sender_email()
-        self._service = None
-        self._credentials = None
+        self._service = None       # OAuth2 方式で使用
+        self._credentials = None   # OAuth2 方式で使用
+        self._auth_method = self._resolve_auth_method()
+        self._smtp_authenticated = False
 
         logger.info(
-            "GmailSender 初期化 (token: %s, credentials: %s, sender: %s)",
-            self._token_path,
-            self._credentials_path,
+            "GmailSender 初期化 (auth: %s, sender: %s)",
+            self._auth_method,
             self._sender_email,
         )
 
-    def _resolve_sender_email(self) -> str:
-        """config.yaml から送信元メールアドレスを取得する。
+    def _resolve_auth_method(self) -> str:
+        """config.yaml から認証方式を取得する。"""
+        try:
+            from src.utils.config import load_config
+            config = load_config()
+            delivery = config.get("delivery", {})
+            gmail_cfg = delivery.get("gmail", {})
+            return gmail_cfg.get("auth_method", "smtp")
+        except Exception:
+            return "smtp"
 
-        Returns:
-            送信元メールアドレス。取得できない場合は "me"。
-        """
+    def _resolve_sender_email(self) -> str:
+        """config.yaml から送信元メールアドレスを取得する。"""
         try:
             from src.utils.config import load_config
             config = load_config()
@@ -111,11 +112,7 @@ class GmailSender:
             return "me"
 
     def _resolve_recipients(self) -> list[str]:
-        """config.yaml から送信先メールアドレスリストを取得する。
-
-        Returns:
-            送信先メールアドレスのリスト。
-        """
+        """config.yaml から送信先メールアドレスリストを取得する。"""
         try:
             from src.utils.config import load_config
             config = load_config()
@@ -126,19 +123,47 @@ class GmailSender:
             logger.warning("config.yaml からの recipients 取得に失敗。空リストを返します。")
             return []
 
+    def _resolve_smtp_config(self) -> dict[str, Any]:
+        """config.yaml から SMTP 設定を取得する。"""
+        try:
+            from src.utils.config import load_config
+            config = load_config()
+            delivery = config.get("delivery", {})
+            gmail_cfg = delivery.get("gmail", {})
+            return gmail_cfg.get("smtp", {})
+        except Exception:
+            return {}
+
+    # ─── 認証 ───────────────────────────────────────────────────
+
     def authenticate(self) -> None:
-        """OAuth2 認証を実行し、Gmail API サービスを構築する。
+        """設定された認証方式で認証を行う。"""
+        if self._auth_method == "smtp":
+            self._authenticate_smtp()
+        else:
+            self._authenticate_oauth2()
 
-        認証フロー:
-        1. 既存のトークンファイルが存在する場合はそれを読み込む
-        2. トークンが期限切れの場合はリフレッシュトークンで自動更新
-        3. トークンファイルが存在しない場合はブラウザ認証フローを実行
-        4. 新しいトークンをファイルに保存
+    def _authenticate_smtp(self) -> None:
+        """SMTP 認証情報の検証を行う。
 
-        Raises:
-            GmailAuthenticationError: 認証に失敗した場合。
-            FileNotFoundError: クライアント認証情報ファイルが見つからない場合。
+        実際の SMTP 接続は send_email 時に行う。
+        ここではアプリパスワードが設定されているかを確認する。
         """
+        app_password = os.environ.get("GMAIL_APP_PASSWORD", "")
+        if not app_password:
+            raise GmailAuthenticationError(
+                "環境変数 GMAIL_APP_PASSWORD が設定されていません。\n"
+                "Gmail アプリパスワードを取得して .env に設定してください:\n"
+                "  1. https://myaccount.google.com/security にアクセス\n"
+                "  2. 「2段階認証プロセス」を有効化\n"
+                "  3. 「アプリ パスワード」で新規作成（アプリ名: AI News Bot）\n"
+                "  4. 生成された16文字のパスワードを .env の GMAIL_APP_PASSWORD に設定"
+            )
+        self._smtp_authenticated = True
+        logger.info("SMTP 認証情報を確認しました")
+
+    def _authenticate_oauth2(self) -> None:
+        """OAuth2 認証を実行し、Gmail API サービスを構築する。"""
         try:
             from google.auth.transport.requests import Request
             from google.oauth2.credentials import Credentials
@@ -153,7 +178,6 @@ class GmailSender:
 
         creds = None
 
-        # 1. 既存トークンの読み込み
         if self._token_path.exists():
             try:
                 creds = Credentials.from_authorized_user_file(
@@ -164,7 +188,6 @@ class GmailSender:
                 logger.warning("トークンファイルの読み込みに失敗: %s", e)
                 creds = None
 
-        # 2. トークンのリフレッシュまたは新規取得
         if creds and creds.expired and creds.refresh_token:
             try:
                 creds.refresh(Request())
@@ -174,7 +197,6 @@ class GmailSender:
                 creds = None
 
         if not creds or not creds.valid:
-            # クライアント認証情報ファイルの確認
             if not self._credentials_path.exists():
                 raise FileNotFoundError(
                     f"OAuth2 クライアント認証情報ファイルが見つかりません: {self._credentials_path}\n"
@@ -193,7 +215,6 @@ class GmailSender:
                     f"OAuth2 認証フローに失敗しました: {e}"
                 )
 
-        # 3. トークンの保存
         try:
             self._token_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self._token_path, "w", encoding="utf-8") as token_file:
@@ -202,7 +223,6 @@ class GmailSender:
         except Exception as e:
             logger.warning("トークンの保存に失敗しました: %s", e)
 
-        # 4. Gmail API サービスの構築
         try:
             self._service = build("gmail", "v1", credentials=creds)
             self._credentials = creds
@@ -212,16 +232,44 @@ class GmailSender:
                 f"Gmail API サービスの構築に失敗しました: {e}"
             )
 
-    def _ensure_authenticated(self) -> None:
-        """認証済みであることを確認する。
+    # ─── 認証状態チェック ────────────────────────────────────────
 
-        Raises:
-            GmailSenderError: 認証が完了していない場合。
-        """
-        if self._service is None:
-            raise GmailSenderError(
-                "Gmail API が未認証です。先に authenticate() を呼び出してください。"
-            )
+    def _ensure_authenticated(self) -> None:
+        """認証済みであることを確認する。"""
+        if self._auth_method == "smtp":
+            if not self._smtp_authenticated:
+                raise GmailSenderError(
+                    "SMTP 認証が完了していません。先に authenticate() を呼び出してください。"
+                )
+        else:
+            if self._service is None:
+                raise GmailSenderError(
+                    "Gmail API が未認証です。先に authenticate() を呼び出してください。"
+                )
+
+    # ─── メッセージ作成 ──────────────────────────────────────────
+
+    def _build_mime_message(
+        self,
+        subject: str,
+        html_body: str,
+        recipients: list[str],
+    ) -> MIMEMultipart:
+        """MIME メッセージを作成する。"""
+        message = MIMEMultipart("alternative")
+        message["Subject"] = subject
+        message["From"] = self._sender_email
+        message["To"] = ", ".join(recipients)
+
+        plain_text = re.sub(r"<[^>]+>", "", html_body)
+        plain_text = re.sub(r"\s+", " ", plain_text).strip()
+        text_part = MIMEText(plain_text, "plain", "utf-8")
+        message.attach(text_part)
+
+        html_part = MIMEText(html_body, "html", "utf-8")
+        message.attach(html_part)
+
+        return message
 
     def _create_message(
         self,
@@ -229,39 +277,16 @@ class GmailSender:
         html_body: str,
         recipients: list[str],
     ) -> dict[str, str]:
-        """送信用の MIME メッセージを作成する。
-
-        Args:
-            subject: メールの件名。
-            html_body: HTML 形式のメール本文。
-            recipients: 送信先メールアドレスのリスト。
-
-        Returns:
-            Gmail API 送信用の Base64 エンコード済みメッセージ辞書。
-        """
-        message = MIMEMultipart("alternative")
-        message["Subject"] = subject
-        message["From"] = self._sender_email
-        message["To"] = ", ".join(recipients)
-
-        # プレーンテキスト版（フォールバック用）
-        import re
-        plain_text = re.sub(r"<[^>]+>", "", html_body)
-        plain_text = re.sub(r"\s+", " ", plain_text).strip()
-        text_part = MIMEText(plain_text, "plain", "utf-8")
-        message.attach(text_part)
-
-        # HTML 版
-        html_part = MIMEText(html_body, "html", "utf-8")
-        message.attach(html_part)
-
-        # Base64 エンコード
+        """Gmail API 用の Base64 エンコード済みメッセージを作成する。"""
+        message = self._build_mime_message(subject, html_body, recipients)
         raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
         return {"raw": raw}
 
+    # ─── 送信 ───────────────────────────────────────────────────
+
     @with_retry(
         max_attempts=3,
-        exceptions=(ConnectionError, TimeoutError, OSError),
+        exceptions=(ConnectionError, TimeoutError, OSError, smtplib.SMTPException),
     )
     def send_email(
         self,
@@ -271,36 +296,74 @@ class GmailSender:
     ) -> dict[str, Any]:
         """HTML メールを送信する。
 
-        Args:
-            subject: メールの件名。
-            html_body: HTML 形式のメール本文。
-            recipients: 送信先メールアドレスのリスト。
-                None の場合は config.yaml の delivery.gmail.recipients を使用。
-
-        Returns:
-            Gmail API のレスポンス辞書。
-
-        Raises:
-            GmailSenderError: 送信に失敗した場合。
-            ValueError: 送信先が空の場合。
+        認証方式に応じて SMTP または Gmail API で送信する。
         """
         self._ensure_authenticated()
 
-        # 送信先の解決
         if recipients is None:
             recipients = self._resolve_recipients()
-
         if not recipients:
             raise ValueError("送信先メールアドレスが指定されていません。")
 
-        # メッセージの作成
-        msg = self._create_message(subject, html_body, recipients)
-
         logger.info(
-            "メール送信開始 (件名: %s, 宛先: %s)",
+            "メール送信開始 (方式: %s, 件名: %s, 宛先: %s)",
+            self._auth_method,
             subject,
             ", ".join(recipients),
         )
+
+        if self._auth_method == "smtp":
+            return self._send_via_smtp(subject, html_body, recipients)
+        else:
+            return self._send_via_api(subject, html_body, recipients)
+
+    def _send_via_smtp(
+        self,
+        subject: str,
+        html_body: str,
+        recipients: list[str],
+    ) -> dict[str, Any]:
+        """SMTP 経由でメールを送信する。"""
+        smtp_cfg = self._resolve_smtp_config()
+        host = smtp_cfg.get("host", "smtp.gmail.com")
+        port = smtp_cfg.get("port", 587)
+        use_tls = smtp_cfg.get("use_tls", True)
+        app_password = os.environ.get("GMAIL_APP_PASSWORD", "")
+
+        message = self._build_mime_message(subject, html_body, recipients)
+
+        try:
+            with smtplib.SMTP(host, port, timeout=30) as server:
+                if use_tls:
+                    server.starttls()
+                server.login(self._sender_email, app_password)
+                server.send_message(message)
+
+            logger.info(
+                "SMTP メール送信完了 (宛先: %s)", ", ".join(recipients),
+            )
+            return {"status": "sent", "method": "smtp", "recipients": recipients}
+
+        except smtplib.SMTPAuthenticationError as e:
+            error_msg = (
+                f"SMTP 認証に失敗しました: {e}\n"
+                "アプリパスワードが正しいか確認してください。"
+            )
+            logger.error(error_msg)
+            raise GmailSenderError(error_msg) from e
+        except Exception as e:
+            error_msg = f"SMTP メール送信に失敗しました: {e}"
+            logger.error(error_msg)
+            raise GmailSenderError(error_msg) from e
+
+    def _send_via_api(
+        self,
+        subject: str,
+        html_body: str,
+        recipients: list[str],
+    ) -> dict[str, Any]:
+        """Gmail API 経由でメールを送信する。"""
+        msg = self._create_message(subject, html_body, recipients)
 
         try:
             result = (
@@ -310,16 +373,17 @@ class GmailSender:
                 .execute()
             )
             logger.info(
-                "メール送信完了 (Message ID: %s, 宛先: %s)",
+                "API メール送信完了 (Message ID: %s, 宛先: %s)",
                 result.get("id", "unknown"),
                 ", ".join(recipients),
             )
             return result
-
         except Exception as e:
-            error_msg = f"メール送信に失敗しました: {e}"
+            error_msg = f"Gmail API メール送信に失敗しました: {e}"
             logger.error(error_msg)
             raise GmailSenderError(error_msg) from e
+
+    # ─── 日次ダイジェスト ────────────────────────────────────────
 
     def send_daily_digest(
         self,
@@ -328,47 +392,19 @@ class GmailSender:
         recipients: list[str] | None = None,
         headline: str = "AI最新ニュース",
     ) -> dict[str, Any]:
-        """日次ダイジェストメールを送信する。
-
-        config.yaml の subject_template を使用して件名を生成し、
-        HTML コンテンツをメール本文として送信する。
-
-        Args:
-            date: 配信日付 (YYYY-MM-DD 形式)。
-            html_content: レンダリング済みの HTML メール本文。
-            recipients: 送信先メールアドレスのリスト。
-                None の場合は config.yaml の設定を使用。
-            headline: 件名に含めるヘッドライン。
-
-        Returns:
-            Gmail API のレスポンス辞書。
-        """
-        # 件名の生成
+        """日次ダイジェストメールを送信する。"""
         subject = self._generate_subject(date, headline)
-
         logger.info("日次ダイジェスト送信開始 (日付: %s)", date)
-
         result = self.send_email(
             subject=subject,
             html_body=html_content,
             recipients=recipients,
         )
-
         logger.info("日次ダイジェスト送信完了 (日付: %s)", date)
         return result
 
     def _generate_subject(self, date: str, headline: str) -> str:
-        """メールの件名を生成する。
-
-        config.yaml の subject_template を使用する。
-
-        Args:
-            date: 配信日付。
-            headline: ヘッドライン文字列。
-
-        Returns:
-            生成された件名文字列。
-        """
+        """メールの件名を生成する。"""
         try:
             from src.utils.config import load_config
             config = load_config()
@@ -386,6 +422,8 @@ class GmailSender:
     @property
     def is_authenticated(self) -> bool:
         """認証済みかどうかを返す。"""
+        if self._auth_method == "smtp":
+            return self._smtp_authenticated
         return self._service is not None
 
     @property

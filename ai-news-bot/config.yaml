@@ -112,11 +112,18 @@ selection:
 delivery:
   gmail:
     enabled: true
-    sender: "your-email@gmail.com"
+    # 認証方式: "smtp" (推奨・簡単) または "oauth2" (Google Cloud Project が必要)
+    auth_method: "smtp"
+    sender: "kazuya.murayama.21@gmail.com"
     recipients:
-      - "recipient1@example.com"
-      - "recipient2@example.com"
+      - "kazuya.murayama.21@gmail.com"
     subject_template: "[AI News] {date} - {headline} 他"
+    # SMTP 設定（auth_method: smtp の場合に使用）
+    smtp:
+      host: "smtp.gmail.com"
+      port: 587
+      use_tls: true
+      # パスワードは .env の GMAIL_APP_PASSWORD で管理
   line:
     enabled: false
 

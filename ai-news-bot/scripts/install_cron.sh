@@ -49,7 +49,7 @@ mkdir -p "${LOG_DIR}"
 echo "ログディレクトリ: ${LOG_DIR}"
 
 # --- cron ジョブの定義 ---
-CRON_JOB="0 6 * * * TZ=Asia/Tokyo cd ${PROJECT_ROOT} && ${PYTHON_BIN} ${MAIN_SCRIPT} >> ${CRON_LOG} 2>&1 ${CRON_MARKER}"
+CRON_JOB="0 6 * * * TZ=Asia/Tokyo cd ${PROJECT_ROOT} && PYTHONPATH=${PROJECT_ROOT} ${PYTHON_BIN} -m src.main >> ${CRON_LOG} 2>&1 ${CRON_MARKER}"
 
 # --- 既存ジョブとの重複チェック ---
 EXISTING_CRON=$(crontab -l 2>/dev/null || true)

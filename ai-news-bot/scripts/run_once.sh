@@ -56,12 +56,13 @@ fi
 
 # --- プロジェクトルートに移動して実行 ---
 cd "${PROJECT_ROOT}"
+export PYTHONPATH="${PROJECT_ROOT}"
 
-echo "実行コマンド: ${PYTHON_BIN} ${MAIN_SCRIPT} $*"
+echo "実行コマンド: PYTHONPATH=${PROJECT_ROOT} ${PYTHON_BIN} -m src.main $*"
 echo "-----------------------------------------"
 echo ""
 
-"${PYTHON_BIN}" "${MAIN_SCRIPT}" "$@"
+"${PYTHON_BIN}" -m src.main "$@"
 
 EXIT_CODE=$?
 

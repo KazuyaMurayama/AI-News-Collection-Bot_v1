@@ -127,11 +127,15 @@ delivery:
   line:
     enabled: false
 
-# --- リアクションサーバー設定 ---
+# --- フィードバック設定 ---
+# 評価ボタンは mailto: 方式で動作する。
+# ボタンクリック → メールアプリ起動 → 送信するだけで評価が記録される。
+# パイプライン実行時に自動的に評価メールを処理し、ナレッジベースに反映する。
+# 手動処理: python -m src.main --process-reactions
 feedback_server:
   host: "127.0.0.1"
   port: 8321
-  base_url: "http://localhost:8321"
+  base_url: ""
 
 # --- ナレッジベース設定 ---
 knowledge_base:

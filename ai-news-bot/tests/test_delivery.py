@@ -126,51 +126,58 @@ class TestMarkdownToHtml:
 
 
 class TestGenerateReactionUrl:
-    """generate_reaction_url 関数のテスト"""
+    """generate_reaction_url 関数のテスト（mailto 方式）"""
 
     def test_basic_url(self):
-        """基本的なリアクション URL 生成"""
+        """基本的な mailto リアクション URL 生成"""
         url = generate_reaction_url(
-            base_url="http://localhost:8321",
+            base_url="",
             date="2026-02-25",
             story_id=1,
             reaction_type="excellent",
         )
-        assert url == "http://localhost:8321/react?date=2026-02-25&story=1&reaction=excellent"
+        assert url.startswith("mailto:")
+        assert "%5BAI-NEWS-REACT%5D" in url  # [AI-NEWS-REACT] (encoded)
+        assert "2026-02-25" in url
+        assert "Story%201" in url or "Story+1" in url
+        assert "excellent" in url
 
     def test_all_reaction_types(self):
-        """全リアクション種別の URL 生成"""
+        """全リアクション種別の mailto URL 生成"""
         reaction_types = ["excellent", "good", "so_so", "read_later"]
         for rtype in reaction_types:
             url = generate_reaction_url(
-                base_url="http://localhost:8321",
+                base_url="",
                 date="2026-02-25",
                 story_id=2,
                 reaction_type=rtype,
             )
-            assert f"reaction={rtype}" in url
-            assert "story=2" in url
+            assert url.startswith("mailto:")
+            assert rtype in url
+            assert "Story%202" in url or "Story+2" in url
 
-    def test_custom_base_url(self):
-        """カスタムベース URL"""
+    def test_mailto_format(self):
+        """mailto URL のフォーマットが正しいこと"""
         url = generate_reaction_url(
-            base_url="https://my-server.example.com",
+            base_url="",
             date="2026-01-01",
             story_id=3,
             reaction_type="good",
         )
-        assert url.startswith("https://my-server.example.com/react?")
+        assert url.startswith("mailto:")
+        assert "subject=" in url
+        assert "body=" in url
 
     def test_story_id_range(self):
         """ストーリー ID の範囲"""
         for story_id in [1, 2, 3]:
             url = generate_reaction_url(
-                base_url="http://localhost:8321",
+                base_url="",
                 date="2026-02-25",
                 story_id=story_id,
                 reaction_type="excellent",
             )
-            assert f"story={story_id}" in url
+            assert f"Story%20{story_id}" in url or f"Story+{story_id}" in url
 
 
 class TestPrepareStoryContext:
@@ -196,20 +203,20 @@ class TestPrepareStoryContext:
         assert len(ctx["reactions"]) == 4
 
     def test_reaction_urls_in_context(self):
-        """コンテキストに正しいリアクション URL が含まれること"""
+        """コンテキストに正しい mailto リアクション URL が含まれること"""
         story = _sample_stories()[0]
         ctx = _prepare_story_context(
             story=story,
             date="2026-02-25",
-            base_url="http://localhost:8321",
+            base_url="",
         )
         reaction_types = [r["type"] for r in ctx["reactions"]]
         assert reaction_types == ["excellent", "good", "so_so", "read_later"]
 
         for reaction in ctx["reactions"]:
-            assert "http://localhost:8321/react?" in reaction["url"]
-            assert "date=2026-02-25" in reaction["url"]
-            assert "story=1" in reaction["url"]
+            assert reaction["url"].startswith("mailto:")
+            assert "2026-02-25" in reaction["url"]
+            assert "Story%201" in reaction["url"] or "Story+1" in reaction["url"]
 
 
 class TestApplyEmailTemplate:
@@ -235,7 +242,7 @@ class TestApplyEmailTemplate:
         for story in stories:
             assert story["title"] in html
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="")
     def test_reaction_buttons_present(self, mock_base_url):
         """リアクションボタンが含まれること"""
         stories = _sample_stories()[:1]
@@ -243,13 +250,14 @@ class TestApplyEmailTemplate:
             html_body="",
             date="2026-02-25",
             stories=stories,
-            base_url="http://localhost:8321",
+            base_url="",
         )
-        # リアクションリンクが含まれていること
-        assert "reaction=excellent" in html
-        assert "reaction=good" in html
-        assert "reaction=so_so" in html
-        assert "reaction=read_later" in html
+        # mailto リアクションリンクが含まれていること
+        assert "mailto:" in html
+        assert "excellent" in html
+        assert "good" in html
+        assert "so_so" in html
+        assert "read_later" in html
 
     @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
     def test_responsive_meta_tags(self, mock_base_url):
@@ -480,42 +488,37 @@ class TestExtractSummary:
 class TestReactionLinkIntegration:
     """リアクションリンク生成の統合テスト"""
 
-    @patch("src.delivery.html_converter._resolve_base_url", return_value="http://localhost:8321")
+    @patch("src.delivery.html_converter._resolve_base_url", return_value="")
     def test_reaction_links_format_in_html(self, mock_base_url):
-        """HTML メール内のリアクションリンクが正しいフォーマットであること"""
+        """HTML メール内の mailto リアクションリンクが正しいフォーマットであること"""
         stories = _sample_stories()
         html = apply_email_template(
             html_body="",
             date="2026-02-25",
             stories=stories,
-            base_url="http://localhost:8321",
+            base_url="",
         )
 
-        # 各ストーリーの各リアクションリンクが正しいフォーマットであることを確認
-        # Jinja2 テンプレートでは href 属性内の & はそのまま出力される
-        for story in stories:
-            story_id = story["id"]
-            for rtype in ["excellent", "good", "so_so", "read_later"]:
-                expected_url = f"http://localhost:8321/react?date=2026-02-25&story={story_id}&reaction={rtype}"
-                assert expected_url in html, (
-                    f"Expected reaction URL not found: story={story_id}, reaction={rtype}"
-                )
+        # 各ストーリーの各リアクションリンクが mailto 形式であることを確認
+        assert "mailto:" in html
+        for rtype in ["excellent", "good", "so_so", "read_later"]:
+            assert rtype in html, f"Reaction type not found in HTML: {rtype}"
 
-    def test_reaction_url_pattern(self):
-        """リアクション URL のパターンが仕様通りであること"""
+    def test_reaction_url_mailto_pattern(self):
+        """リアクション URL が mailto 形式であること"""
         url = generate_reaction_url(
-            base_url="http://localhost:8321",
+            base_url="",
             date="2026-02-25",
             story_id=1,
             reaction_type="excellent",
         )
-        # architecture.md のパターン: http://localhost:8321/react?date={YYYY-MM-DD}&story={1-3}&reaction={type}
-        pattern = r"^http://localhost:\d+/react\?date=\d{4}-\d{2}-\d{2}&story=\d+&reaction=(excellent|good|so_so|read_later)$"
-        assert re.match(pattern, url), f"URL pattern mismatch: {url}"
+        # mailto: で始まり、件名に [AI-NEWS-REACT] が含まれること
+        assert url.startswith("mailto:")
+        assert "subject=" in url
+        assert "AI-NEWS-REACT" in url
 
     def test_reaction_mapping_completeness(self):
-        """リアクションの種別と architecture.md の定義が一致すること"""
-        # architecture.md: excellent(5), good(4), bookmark(3), meh(2)
+        """リアクションの種別定義が完全であること"""
         expected_types = {"excellent", "good", "so_so", "read_later"}
         actual_types = {r["type"] for r in REACTIONS}
         assert actual_types == expected_types

@@ -6,9 +6,10 @@ Markdown コンテンツを HTML に変換し、メール配信用の
 主な機能:
 - Markdown -> HTML 変換（tables, fenced_code 等の拡張対応）
 - Jinja2 テンプレートによるメール HTML 生成
-- リアクションボタン付きカード型レイアウト
+- リアクションボタン付きカード型レイアウト（mailto 方式）
 """
 
+import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -91,18 +92,42 @@ def _get_jinja_env() -> Environment:
 
 
 def generate_reaction_url(base_url: str, date: str, story_id: int, reaction_type: str) -> str:
-    """リアクション URL を生成する。
+    """リアクション URL を生成する（mailto 方式）。
+
+    ボタンクリックでメールアプリが起動し、評価情報が記載された
+    メールが作成される。送信するだけで評価が記録される。
 
     Args:
-        base_url: フィードバックサーバーのベース URL (例: "http://localhost:8321")。
+        base_url: 未使用（互換性のために残す）。
         date: 記事の日付 (YYYY-MM-DD)。
         story_id: ストーリー ID (1-3)。
-        reaction_type: リアクション種別 (excellent, good, meh, bookmark)。
+        reaction_type: リアクション種別 (excellent, good, so_so, read_later)。
 
     Returns:
-        リアクション URL 文字列。
+        mailto: URL 文字列。
     """
-    return f"{base_url}/react?date={date}&story={story_id}&reaction={reaction_type}"
+    recipient = _resolve_feedback_email()
+
+    reaction_info = next((r for r in REACTIONS if r["type"] == reaction_type), None)
+    emoji = reaction_info["emoji"] if reaction_info else ""
+    label = reaction_info["label"] if reaction_info else reaction_type
+
+    subject = f"[AI-NEWS-REACT] {date} / Story {story_id} / {reaction_type}"
+    body = (
+        f"{emoji} 「{label}」と評価しました\n"
+        f"\n"
+        f"日付: {date}\n"
+        f"記事: Story {story_id}\n"
+        f"評価: {label}\n"
+        f"\n"
+        f"※ このメールを送信するだけで評価が記録されます。"
+    )
+
+    params = urllib.parse.urlencode(
+        {"subject": subject, "body": body},
+        quote_via=urllib.parse.quote,
+    )
+    return f"mailto:{recipient}?{params}"
 
 
 def _prepare_story_context(
@@ -222,13 +247,31 @@ def _resolve_base_url() -> str:
     設定が読み込めない場合はデフォルト値を返す。
 
     Returns:
-        フィードバックサーバーのベース URL。
+        フィードバックサーバーのベース URL（mailto 方式では未使用）。
     """
     try:
         from src.utils.config import load_config
         config = load_config()
         fb = config.get("feedback_server", {})
-        return fb.get("base_url", "http://localhost:8321")
+        return fb.get("base_url", "")
     except Exception:
-        logger.warning("config.yaml からの base_url 取得に失敗しました。デフォルト値を使用します。")
-        return "http://localhost:8321"
+        return ""
+
+
+def _resolve_feedback_email() -> str:
+    """フィードバック受信用メールアドレスを config.yaml から取得する。
+
+    delivery.gmail.sender の値を使用する。
+
+    Returns:
+        フィードバック受信用メールアドレス。
+    """
+    try:
+        from src.utils.config import load_config
+        config = load_config()
+        delivery = config.get("delivery", {})
+        gmail_cfg = delivery.get("gmail", {})
+        return gmail_cfg.get("sender", "")
+    except Exception:
+        logger.warning("config.yaml からメールアドレスを取得できませんでした。")
+        return ""

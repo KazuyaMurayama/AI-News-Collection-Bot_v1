@@ -101,6 +101,20 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
         raise
 
     # ------------------------------------------------------------------
+    # Step 1.5: リアクションメール処理（前日分の評価を反映）
+    # ------------------------------------------------------------------
+    logger.info("--- Step 1.5: リアクションメール処理 ---")
+    try:
+        from src.feedback.email_processor import process_reaction_emails
+        reaction_count = process_reaction_emails()
+        if reaction_count > 0:
+            logger.info("リアクションメールから %d 件の評価を反映しました", reaction_count)
+        else:
+            logger.info("処理対象のリアクションメールはありませんでした")
+    except Exception as e:
+        logger.warning("リアクションメール処理でエラー（続行します）: %s", e)
+
+    # ------------------------------------------------------------------
     # Step 2: ニュース収集
     # ------------------------------------------------------------------
     logger.info("--- Step 2: ニュース収集 ---")
@@ -352,6 +366,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=False,
         help="リアクションフィードバックサーバーを起動する。",
     )
+    parser.add_argument(
+        "--process-reactions",
+        action="store_true",
+        default=False,
+        help="受信メールからリアクション評価を処理する。",
+    )
     return parser.parse_args(argv)
 
 
@@ -378,6 +398,24 @@ def main(argv: list[str] | None = None) -> None:
 
         from src.feedback import run_server
         run_server()
+        return
+
+    # --- リアクションメール処理モード ---
+    if args.process_reactions:
+        from src.utils.logger import setup_logger
+        logger = setup_logger("main")
+        logger.info("リアクションメール処理モードで起動します")
+
+        try:
+            from src.utils.config import AppConfig
+            AppConfig.get_instance()
+        except Exception as e:
+            logger.critical("設定の読み込みに失敗しました: %s", e)
+            sys.exit(1)
+
+        from src.feedback.email_processor import process_reaction_emails
+        count = process_reaction_emails()
+        logger.info("リアクションメール処理完了: %d 件", count)
         return
 
     # --- パイプラインモード ---

@@ -171,6 +171,7 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
     stories: list[dict[str, Any]] = []
 
     from src.writer import select_framework, transform_to_story
+    from src.writer.storyteller import extract_title_and_body
 
     for idx, article in enumerate(selected_articles, start=1):
         try:
@@ -180,13 +181,18 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
             story_text = transform_to_story(article, framework=framework)
             logger.info("記事 %d: ストーリー変換完了 (%d 文字)", idx, len(story_text))
 
+            # 生成されたストーリーから日本語タイトルと本文を分離
+            ja_title, story_body = extract_title_and_body(story_text)
+            # 日本語タイトルが取得できた場合はそれを使用、できなければ元のタイトル
+            display_title = ja_title if ja_title else article.get("title", "無題")
+
             story_entry: dict[str, Any] = {
                 "id": idx,
-                "title": article.get("title", "無題"),
+                "title": display_title,
                 "source": article.get("source", ""),
                 "url": article.get("url", ""),
                 "summary": article.get("summary", ""),
-                "body": story_text,
+                "body": story_body if story_body else story_text,
                 "story": story_text,
                 "framework": framework,
                 "category": article.get("category", ""),

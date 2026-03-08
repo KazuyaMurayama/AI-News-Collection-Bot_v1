@@ -63,7 +63,7 @@ def _build_frontmatter_metadata(
     Args:
         date: 日付文字列 (YYYY-MM-DD)。
         stories: ストーリー情報のリスト。各要素は以下のキーを含む:
-            - id (int): ストーリーID (1-3)
+            - id (int): ストーリーID
             - title (str): タイトル
             - source (str): ソース名
             - url (str): 元記事URL
@@ -198,7 +198,7 @@ def generate_daily_markdown(
     Args:
         date: 日付文字列 (YYYY-MM-DD)。
         stories: ストーリー情報のリスト。各要素は以下のキーを含む:
-            - id (int): ストーリーID (1-3)
+            - id (int): ストーリーID
             - title (str): タイトル
             - source (str): ソース名
             - url (str): 元記事URL

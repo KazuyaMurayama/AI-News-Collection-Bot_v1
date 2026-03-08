@@ -95,7 +95,7 @@ def update_reaction(
 
     Args:
         date: 記事の日付 (YYYY-MM-DD)。
-        story_id: ストーリー ID (1-3)。
+        story_id: ストーリー ID。
         reaction_type: リアクション種別 ("excellent", "good", "bookmark", "meh")。
         daily_dir: daily ディレクトリのパス。None の場合は設定から自動解決。
 
@@ -110,13 +110,13 @@ def update_reaction(
     if reaction_type not in REACTION_MAP:
         valid_types = ", ".join(REACTION_MAP.keys())
         raise ValueError(
-            f"Invalid reaction type: '{reaction_type}'. Must be one of: {valid_types}"
+            f"不正なリアクション種別: '{reaction_type}'。{valid_types} のいずれかを指定してください"
         )
 
     # バリデーション: story_id
-    if not isinstance(story_id, int) or story_id < 1 or story_id > 3:
+    if not isinstance(story_id, int) or story_id < 1 or story_id > 10:
         raise ValueError(
-            f"Invalid story_id: {story_id}. Must be an integer between 1 and 3."
+            f"不正な story_id: {story_id}。1〜10 の整数を指定してください。"
         )
 
     # ファイルパスの解決
@@ -126,7 +126,7 @@ def update_reaction(
 
     if not md_path.exists():
         raise FileNotFoundError(
-            f"Article not found: {date}, story {story_id} (file: {md_path})"
+            f"記事が見つかりません: {date}, 記事 {story_id} (ファイル: {md_path})"
         )
 
     filepath_str = str(md_path.resolve())

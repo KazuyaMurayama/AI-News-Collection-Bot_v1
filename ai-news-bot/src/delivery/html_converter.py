@@ -100,7 +100,7 @@ def generate_reaction_url(base_url: str, date: str, story_id: int, reaction_type
     Args:
         base_url: 未使用（互換性のために残す）。
         date: 記事の日付 (YYYY-MM-DD)。
-        story_id: ストーリー ID (1-3)。
+        story_id: ストーリー ID。
         reaction_type: リアクション種別 (excellent, good, so_so, read_later)。
 
     Returns:

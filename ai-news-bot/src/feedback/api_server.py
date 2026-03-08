@@ -161,9 +161,9 @@ def create_app() -> FastAPI:
         ),
         story: int = Query(
             ...,
-            description="\u30b9\u30c8\u30fc\u30ea\u30fc ID (1-3)",
+            description="記事 ID (1-10)",
             ge=1,
-            le=3,
+            le=10,
         ),
         reaction: str = Query(
             ...,
@@ -180,14 +180,14 @@ def create_app() -> FastAPI:
             valid_types = ", ".join(REACTION_MAP.keys())
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid parameter: reaction must be one of {valid_types}",
+                detail=f"不正なパラメータ: reaction は {valid_types} のいずれかを指定してください",
             )
 
         # 日付フォーマットの追加バリデーション
         if not _DATE_PATTERN.match(date):
             raise HTTPException(
                 status_code=400,
-                detail="Invalid parameter: date must be in YYYY-MM-DD format",
+                detail="不正なパラメータ: date は YYYY-MM-DD 形式で指定してください",
             )
 
         # 日付の妥当性チェック
@@ -196,7 +196,7 @@ def create_app() -> FastAPI:
         except ValueError:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid date: {date}",
+                detail=f"不正な日付: {date}",
             )
 
         # Frontmatter 更新
@@ -209,7 +209,7 @@ def create_app() -> FastAPI:
         except FileNotFoundError:
             raise HTTPException(
                 status_code=404,
-                detail=f"Article not found: {date}, story {story}",
+                detail=f"記事が見つかりません: {date}, 記事 {story}",
             )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
@@ -217,7 +217,7 @@ def create_app() -> FastAPI:
         if not success:
             raise HTTPException(
                 status_code=500,
-                detail="Failed to update reaction. Please try again later.",
+                detail="リアクションの更新に失敗しました。しばらくしてからお試しください。",
             )
 
         logger.info(
@@ -242,26 +242,26 @@ def create_app() -> FastAPI:
             valid_types = ", ".join(REACTION_MAP.keys())
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid reaction type: must be one of {valid_types}",
+                detail=f"不正なリアクション種別: {valid_types} のいずれかを指定してください",
             )
         if not _DATE_PATTERN.match(date):
-            raise HTTPException(status_code=400, detail="Invalid date format")
+            raise HTTPException(status_code=400, detail="不正な日付形式です")
         try:
             datetime.strptime(date, "%Y-%m-%d")
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid date: {date}")
-        if story_id < 1 or story_id > 3:
-            raise HTTPException(status_code=400, detail="story_id must be 1-3")
+            raise HTTPException(status_code=400, detail=f"不正な日付: {date}")
+        if story_id < 1 or story_id > 10:
+            raise HTTPException(status_code=400, detail="story_id は 1〜10 の範囲で指定してください")
 
         try:
             success = update_reaction(date=date, story_id=story_id, reaction_type=reaction_type)
         except FileNotFoundError:
-            raise HTTPException(status_code=404, detail=f"Article not found: {date}, story {story_id}")
+            raise HTTPException(status_code=404, detail=f"記事が見つかりません: {date}, 記事 {story_id}")
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
         if not success:
-            raise HTTPException(status_code=500, detail="Failed to update reaction.")
+            raise HTTPException(status_code=500, detail="リアクションの更新に失敗しました。")
 
         logger.info("リアクション受信 (RESTful): date=%s, story=%d, reaction=%s", date, story_id, reaction_type)
         html = _build_thank_you_html(reaction_type, story_id, date)
@@ -272,7 +272,7 @@ def create_app() -> FastAPI:
     async def get_stories_by_date(date: str) -> JSONResponse:
         """指定日のニュース一覧取得。"""
         if not _DATE_PATTERN.match(date):
-            raise HTTPException(status_code=400, detail="Invalid date format")
+            raise HTTPException(status_code=400, detail="不正な日付形式です")
         try:
             from src.knowledge.search import get_all_articles
             articles = get_all_articles()
@@ -287,13 +287,13 @@ def create_app() -> FastAPI:
     async def get_story_detail(date: str, story_id: int) -> JSONResponse:
         """指定ニュースの詳細取得。"""
         if not _DATE_PATTERN.match(date):
-            raise HTTPException(status_code=400, detail="Invalid date format")
+            raise HTTPException(status_code=400, detail="不正な日付形式です")
         try:
             from src.knowledge.search import get_all_articles
             articles = get_all_articles()
             matches = [a for a in articles if str(a.get("date", "")) == date and a.get("id") == story_id]
             if not matches:
-                raise HTTPException(status_code=404, detail="Story not found")
+                raise HTTPException(status_code=404, detail="記事が見つかりません")
             return JSONResponse(content=matches[0])
         except HTTPException:
             raise
@@ -336,7 +336,7 @@ def create_app() -> FastAPI:
             monthly_dir = config.get("knowledge_base.monthly_dir", "./knowledge_base/monthly")
             summary_path = Path(monthly_dir) / f"{year:04d}-{month:02d}_summary.md"
             if not summary_path.exists():
-                raise HTTPException(status_code=404, detail=f"Summary not found: {year}-{month:02d}")
+                raise HTTPException(status_code=404, detail=f"サマリーが見つかりません: {year}-{month:02d}")
             content = summary_path.read_text(encoding="utf-8")
             return JSONResponse(content={"year": year, "month": month, "content": content})
         except HTTPException:

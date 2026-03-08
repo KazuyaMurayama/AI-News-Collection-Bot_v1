@@ -132,7 +132,7 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
         fallback_story = {
             "id": 1,
             "title": "本日のAIニュースは取得できませんでした",
-            "source": "System",
+            "source": "システム",
             "url": "",
             "summary": "ニュースソースへのアクセスに問題が発生した可能性があります。",
             "body": (
@@ -201,15 +201,22 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
             stories.append(story_entry)
         except Exception as e:
             logger.error("記事 %d のストーリー変換に失敗しました: %s", idx, e, exc_info=True)
-            # 変換に失敗した記事はそのまま含める
+            # 変換に失敗した記事は日本語のフォールバック本文で含める
+            original_title = article.get("title", "無題")
+            original_summary = article.get("summary", article.get("body", ""))
+            fallback_body = (
+                f"**{original_title}**\n\n"
+                f"※ この記事は自動翻訳・解説の生成に失敗したため、元の情報を表示しています。\n\n"
+                f"元記事の概要:\n{original_summary}"
+            )
             stories.append({
                 "id": idx,
-                "title": article.get("title", "無題"),
+                "title": f"【要確認】{original_title}",
                 "source": article.get("source", ""),
                 "url": article.get("url", ""),
-                "summary": article.get("summary", ""),
-                "body": article.get("summary", article.get("body", "")),
-                "story": article.get("summary", article.get("body", "")),
+                "summary": original_summary,
+                "body": fallback_body,
+                "story": fallback_body,
                 "framework": "",
                 "category": article.get("category", ""),
                 "tags": [],

@@ -160,7 +160,7 @@ def _render_body_fallback(date: str, stories: list[dict], insight: str) -> str:
         生成された Markdown 本文。
     """
     lines: list[str] = []
-    lines.append(f"# AI News - {date}")
+    lines.append(f"# AI ニュース - {date}")
     lines.append("")
 
     for story in stories:
@@ -170,14 +170,14 @@ def _render_body_fallback(date: str, stories: list[dict], insight: str) -> str:
         url = story.get("url", "")
         body = story.get("body", "")
 
-        lines.append(f"## Story {story_id}: {title}")
+        lines.append(f"## 記事 {story_id}: {title}")
         lines.append("")
-        lines.append(f"> Source: [{source}]({url})")
+        lines.append(f"> 出典: [{source}]({url})")
         lines.append("")
         lines.append(body)
         lines.append("")
 
-    lines.append("## Today's Insight")
+    lines.append("## 本日のインサイト")
     lines.append("")
     lines.append(insight)
     lines.append("")

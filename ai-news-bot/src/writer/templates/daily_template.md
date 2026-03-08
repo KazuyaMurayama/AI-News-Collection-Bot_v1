@@ -1,13 +1,13 @@
-# AI News - {{ date }}
+# AI ニュース - {{ date }}
 
 {% for story in stories %}
-## Story {{ story.id }}: {{ story.title }}
+## 記事 {{ story.id }}: {{ story.title }}
 
-> Source: [{{ story.source }}]({{ story.url }})
+> 出典: [{{ story.source }}]({{ story.url }})
 
 {{ story.body }}
 
 {% endfor %}
-## Today's Insight
+## 本日のインサイト
 
 {{ insight }}

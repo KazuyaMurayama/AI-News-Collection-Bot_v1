@@ -73,8 +73,8 @@ def _extract_summary(entry: Any) -> str:
     text = text.strip()
 
     # 長すぎる概要を切り詰め
-    if len(text) > 500:
-        text = text[:497] + "..."
+    if len(text) > 1500:
+        text = text[:1497] + "..."
     return text
 
 

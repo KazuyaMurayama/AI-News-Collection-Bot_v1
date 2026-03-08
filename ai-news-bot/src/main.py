@@ -54,14 +54,14 @@ def send_error_notification(error_message: str, logger: Any) -> None:
         sender = GmailSender()
         sender.authenticate()
 
-        subject = f"[AI News Bot] ERROR - {_today_jst()}"
+        subject = f"[AI ニュース Bot] エラー通知 - {_today_jst()}"
         html_body = (
             "<html><body>"
-            "<h2 style='color:#e53e3e;'>AI News Bot - Error Report</h2>"
-            f"<p><strong>Date:</strong> {_today_jst()}</p>"
+            "<h2 style='color:#e53e3e;'>AI ニュース Bot - エラーレポート</h2>"
+            f"<p><strong>日付:</strong> {_today_jst()}</p>"
             f"<pre style='background:#f7fafc;padding:16px;border-radius:8px;"
             f"overflow-x:auto;'>{error_message}</pre>"
-            "<p>Please check the logs for details.</p>"
+            "<p>詳細はログを確認してください。</p>"
             "</body></html>"
         )
 

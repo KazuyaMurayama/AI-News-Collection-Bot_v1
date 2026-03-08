@@ -186,13 +186,13 @@ def _get_model_config() -> dict[str, Any]:
         claude_cfg = config.get("claude", {})
         return {
             "model": claude_cfg.get("model", "claude-sonnet-4-20250514"),
-            "max_tokens": claude_cfg.get("max_tokens", 4096),
+            "max_tokens": claude_cfg.get("max_tokens", 8192),
             "temperature": claude_cfg.get("temperature", 0.7),
         }
     except Exception:
         return {
             "model": "claude-sonnet-4-20250514",
-            "max_tokens": 4096,
+            "max_tokens": 8192,
             "temperature": 0.7,
         }
 
@@ -379,7 +379,7 @@ def transform_to_story(article: dict, framework: str | None = None) -> str:
 
 @with_retry(max_attempts=3, exceptions=(anthropic.APIError, anthropic.APIConnectionError))
 def generate_insight(stories: list[dict]) -> str:
-    """3記事の共通テーマを分析し、Today's Insight を生成する。
+    """記事群の共通テーマを分析し、本日のインサイトを生成する。
 
     Claude API を使用して、記事群に共通するトレンドや示唆を
     800-1200文字でまとめる。
@@ -416,11 +416,15 @@ def generate_insight(stories: list[dict]) -> str:
         )
         stories_text_parts.append(part)
 
-    user_message = "\n".join(stories_text_parts)
+    user_message = (
+        "以下の記事群を分析し、800〜1200文字の日本語で本日のインサイトを書いてください。\n"
+        "すべて日本語で出力してください。\n\n"
+        + "\n".join(stories_text_parts)
+    )
 
     response = client.messages.create(
         model=model_cfg["model"],
-        max_tokens=2048,
+        max_tokens=4096,
         temperature=model_cfg["temperature"],
         system=_INSIGHT_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_message}],

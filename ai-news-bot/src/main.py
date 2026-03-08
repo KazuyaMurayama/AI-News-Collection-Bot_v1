@@ -438,7 +438,7 @@ def main(argv: list[str] | None = None) -> None:
     try:
         datetime.strptime(target_date, "%Y-%m-%d")
     except ValueError:
-        print(f"Error: 日付フォーマットが不正です: {target_date} (期待: YYYY-MM-DD)")
+        print(f"エラー: 日付フォーマットが不正です: {target_date} (期待: YYYY-MM-DD)")
         sys.exit(1)
 
     # ログ初期化（エラー通知用に先に取得）

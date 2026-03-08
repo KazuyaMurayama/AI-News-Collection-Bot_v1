@@ -111,7 +111,7 @@ def fetch_from_newsapi(
     data = response.json()
 
     if data.get("status") != "ok":
-        error_msg = data.get("message", "Unknown error")
+        error_msg = data.get("message", "不明なエラー")
         logger.error("NewsAPI エラー: %s", error_msg)
         return []
 

@@ -237,7 +237,7 @@ def scrape_articles(
     logger.info("Web スクレイピングを開始します: %d ソース", len(sources))
 
     for i, source in enumerate(sources):
-        source_name = source.get("name", "Unknown")
+        source_name = source.get("name", "不明")
         source_url = source.get("url", "")
         category = source.get("category", "")
         language = source.get("language", "ja")

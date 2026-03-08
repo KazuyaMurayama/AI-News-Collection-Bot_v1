@@ -22,9 +22,10 @@ from src.utils.logger import setup_logger
 logger = setup_logger(__name__)
 
 # リアクションメールの件名パターン
-# 例: [AI-NEWS-REACT] 2026-03-04 / Story 1 / excellent
+# 例: [AI-NEWS-REACT] 2026-03-04 / 記事 1 / excellent
+# 後方互換: Story も受け付ける
 _SUBJECT_PATTERN = re.compile(
-    r"\[AI-NEWS-REACT\]\s+(\d{4}-\d{2}-\d{2})\s*/\s*Story\s+(\d+)\s*/\s*(\w+)"
+    r"\[AI-NEWS-REACT\]\s+(\d{4}-\d{2}-\d{2})\s*/\s*(?:Story|記事)\s+(\d+)\s*/\s*(\w+)"
 )
 
 

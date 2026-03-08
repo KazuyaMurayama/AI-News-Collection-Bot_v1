@@ -410,14 +410,14 @@ class GmailSender:
             config = load_config()
             delivery = config.get("delivery", {})
             gmail_cfg = delivery.get("gmail", {})
-            template = gmail_cfg.get("subject_template", "[AI News] {date} - {headline} 他")
+            template = gmail_cfg.get("subject_template", "[AIニュース] {date} - {headline} 他")
         except Exception:
-            template = "[AI News] {date} - {headline} 他"
+            template = "[AIニュース] {date} - {headline} 他"
 
         try:
             return template.format(date=date, headline=headline)
         except KeyError:
-            return f"[AI News] {date} - {headline} 他"
+            return f"[AIニュース] {date} - {headline} 他"
 
     @property
     def is_authenticated(self) -> bool:

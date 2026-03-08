@@ -112,12 +112,12 @@ def generate_reaction_url(base_url: str, date: str, story_id: int, reaction_type
     emoji = reaction_info["emoji"] if reaction_info else ""
     label = reaction_info["label"] if reaction_info else reaction_type
 
-    subject = f"[AI-NEWS-REACT] {date} / Story {story_id} / {reaction_type}"
+    subject = f"[AI-NEWS-REACT] {date} / 記事 {story_id} / {reaction_type}"
     body = (
         f"{emoji} 「{label}」と評価しました\n"
         f"\n"
         f"日付: {date}\n"
-        f"記事: Story {story_id}\n"
+        f"記事: 記事 {story_id}\n"
         f"評価: {label}\n"
         f"\n"
         f"※ このメールを送信するだけで評価が記録されます。"

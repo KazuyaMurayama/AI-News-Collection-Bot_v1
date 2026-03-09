@@ -51,8 +51,8 @@ class GmailSender:
         sender = GmailSender()
         sender.authenticate()   # SMTP 接続テスト
         sender.send_email(
-            subject="[AI News] 2026-03-02",
-            html_body="<h1>Today's AI News</h1>...",
+            subject="[AIニュース] 2026-03-02",
+            html_body="<h1>AIニュース</h1>...",
         )
 
     OAuth2 方式::

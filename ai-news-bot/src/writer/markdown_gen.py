@@ -14,10 +14,10 @@ Frontmatter を付加する。
         source: "..."
         ...
     ---
-    # AI News - YYYY-MM-DD
-    ## Story 1: タイトル
+    # AI ニュース - YYYY-MM-DD
+    ## 記事 1: タイトル
     ...
-    ## Today's Insight
+    ## 本日のインサイト
     ...
 """
 
@@ -123,7 +123,7 @@ def _render_body(date: str, stories: list[dict], insight: str) -> str:
     Args:
         date: 日付文字列 (YYYY-MM-DD)。
         stories: ストーリー情報のリスト。各要素には body キーも含む。
-        insight: Today's Insight テキスト。
+        insight: 本日のインサイト テキスト。
 
     Returns:
         レンダリングされた Markdown 本文。
@@ -154,7 +154,7 @@ def _render_body_fallback(date: str, stories: list[dict], insight: str) -> str:
     Args:
         date: 日付文字列 (YYYY-MM-DD)。
         stories: ストーリー情報のリスト。
-        insight: Today's Insight テキスト。
+        insight: 本日のインサイト テキスト。
 
     Returns:
         生成された Markdown 本文。
@@ -207,7 +207,7 @@ def generate_daily_markdown(
             - rating (int | None): 評価スコア (null or 1-5)
             - reaction (str | None): リアクション種別 (null or type)
             - body (str): ストーリー本文
-        insight: Today's Insight テキスト。
+        insight: 本日のインサイト テキスト。
 
     Returns:
         YAML Frontmatter 付きの完全な Markdown 文字列。

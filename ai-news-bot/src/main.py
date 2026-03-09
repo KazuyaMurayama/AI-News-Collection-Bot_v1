@@ -9,7 +9,7 @@ AI News Collector Bot の全モジュールを統合し、
     3. 中間 JSON 保存
     4. ストーリーテリング変換: select_framework() + transform_to_story()
     5. 自動タグ付け: auto_tag()
-    6. Today's Insight 生成: generate_insight()
+    6. 本日のインサイト 生成: generate_insight()
     7. Markdown 生成・保存: generate_daily_markdown() + save_markdown()
     8. Gmail 配信: GmailSender + apply_email_template() + send_daily_digest()
     9. LINE 配信（有効な場合）
@@ -241,15 +241,15 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
             story["tags"] = []
 
     # ------------------------------------------------------------------
-    # Step 6: Today's Insight 生成
+    # Step 6: 本日のインサイト 生成
     # ------------------------------------------------------------------
-    logger.info("--- Step 6: Today's Insight 生成 ---")
+    logger.info("--- Step 6: 本日のインサイト生成 ---")
     try:
         from src.writer import generate_insight
         insight = generate_insight(stories)
-        logger.info("Insight 生成完了 (%d 文字)", len(insight))
+        logger.info("インサイト生成完了 (%d 文字)", len(insight))
     except Exception as e:
-        logger.error("Insight 生成に失敗しました: %s", e, exc_info=True)
+        logger.error("インサイト生成に失敗しました: %s", e, exc_info=True)
         insight = "本日のインサイトは生成できませんでした。"
 
     # ------------------------------------------------------------------

@@ -201,7 +201,7 @@ def apply_email_template(
             - tags (list[str]): タグリスト
         base_url: フィードバックサーバーのベース URL。
             None の場合は config.yaml から取得を試みる。
-        insight: Today's Insight テキスト。None の場合は非表示。
+        insight: 本日のインサイト テキスト。None の場合は非表示。
 
     Returns:
         レンダリング済みの HTML メール文字列。

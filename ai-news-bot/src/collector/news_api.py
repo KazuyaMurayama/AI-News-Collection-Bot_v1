@@ -140,8 +140,8 @@ def fetch_from_newsapi(
 
         # 概要の取得
         description = (raw.get("description") or "").strip()
-        if len(description) > 500:
-            description = description[:497] + "..."
+        if len(description) > 1500:
+            description = description[:1497] + "..."
 
         article = {
             "title": title,
@@ -232,7 +232,7 @@ def fetch_from_hackernews(
         # ポイント数とコメント数を概要として使用
         points = hit.get("points", 0)
         num_comments = hit.get("num_comments", 0)
-        summary = f"HN Points: {points}, Comments: {num_comments}"
+        summary = f"HNポイント: {points}, コメント数: {num_comments}"
 
         # story_text がある場合は概要に追加
         story_text = (hit.get("story_text") or "").strip()
@@ -242,7 +242,9 @@ def fetch_from_hackernews(
 
             clean_text = re.sub(r"<[^>]+>", "", story_text).strip()
             if clean_text:
-                summary = clean_text[:400] if len(clean_text) > 400 else clean_text
+                if len(clean_text) > 1500:
+                    clean_text = clean_text[:1497] + "..."
+                summary = f"HNポイント: {points}, コメント数: {num_comments}\n\n{clean_text}"
 
         article = {
             "title": title,

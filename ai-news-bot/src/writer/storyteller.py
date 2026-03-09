@@ -122,6 +122,30 @@ Markdownの見出し（#）は使わないでください。
 800文字以上を必ず確保してください。短すぎる出力は不合格です。"""
 
 
+def _contains_japanese(text: str, min_ratio: float = 0.1) -> bool:
+    """テキストに十分な日本語文字が含まれているかチェックする。
+
+    Args:
+        text: チェック対象のテキスト。
+        min_ratio: 日本語文字の最低割合（デフォルト: 10%）。
+
+    Returns:
+        日本語文字が十分に含まれている場合 True。
+    """
+    if not text:
+        return False
+    japanese_count = sum(
+        1 for c in text
+        if ('\u3040' <= c <= '\u309F')    # ひらがな
+        or ('\u30A0' <= c <= '\u30FF')    # カタカナ
+        or ('\u4E00' <= c <= '\u9FFF')    # 漢字
+    )
+    total = len(text.strip())
+    if total == 0:
+        return False
+    return (japanese_count / total) >= min_ratio
+
+
 def extract_title_and_body(story_text: str) -> tuple[str, str]:
     """生成されたストーリーテキストからタイトルと本文を分離する。
 
@@ -348,14 +372,23 @@ def transform_to_story(article: dict, framework: str | None = None) -> str:
 
     system_prompt = _STORYTELLING_SYSTEM_PROMPT.format(framework=framework_desc)
 
+    # 記事の本文情報をできるだけ豊富に含める
+    summary = article.get("summary", "")
+    body = article.get("body", "")
+    content_text = summary
+    if body and body != summary:
+        content_text = f"{summary}\n\n{body}" if summary else body
+    if not content_text:
+        content_text = "情報なし"
+
     user_message = (
         f"以下の記事を元に、2000〜3000文字の日本語解説記事を書いてください。\n"
-        f"タイトルも本文もすべて日本語で出力してください。\n\n"
+        f"【重要】タイトルも本文もすべて日本語で出力してください。英語は禁止です。\n\n"
         f"記事タイトル: {article.get('title', '不明')}\n"
         f"ソース: {article.get('source', '不明')}\n"
         f"公開日: {article.get('published_at', '不明')}\n"
         f"URL: {article.get('url', '')}\n"
-        f"\n記事概要:\n{article.get('summary', '情報なし')}"
+        f"\n記事内容:\n{content_text}"
     )
 
     response = client.messages.create(
@@ -368,10 +401,31 @@ def transform_to_story(article: dict, framework: str | None = None) -> str:
 
     story = response.content[0].text.strip()
 
+    # 日本語コンテンツの検証: 日本語が含まれていない場合は再試行
+    if not _contains_japanese(story):
+        logger.warning(
+            "ストーリーに日本語が含まれていません。再生成を試みます: %s",
+            article.get("title", "不明"),
+        )
+        retry_message = (
+            "前回の出力が英語でした。必ず日本語で出力してください。\n"
+            "英語での出力は一切禁止です。タイトルも本文も100%日本語で書いてください。\n\n"
+            + user_message
+        )
+        response = client.messages.create(
+            model=model_cfg["model"],
+            max_tokens=model_cfg["max_tokens"],
+            temperature=model_cfg["temperature"],
+            system=system_prompt,
+            messages=[{"role": "user", "content": retry_message}],
+        )
+        story = response.content[0].text.strip()
+
     logger.info(
-        "ストーリー変換完了: %s (%d文字)",
+        "ストーリー変換完了: %s (%d文字, 日本語: %s)",
         article.get("title", "不明"),
         len(story),
+        _contains_japanese(story),
     )
 
     return story
@@ -393,13 +447,13 @@ def generate_insight(stories: list[dict]) -> str:
             - tags (list[str], optional): タグリスト
 
     Returns:
-        生成された Today's Insight テキスト。
+        生成された 本日のインサイト テキスト。
     """
     if not stories:
         logger.warning("ストーリーが空のため、インサイトを生成できません")
         return "本日のインサイトは生成できませんでした。"
 
-    logger.info("Today's Insight を生成中 (%d記事)", len(stories))
+    logger.info("本日のインサイトを生成中 (%d記事)", len(stories))
 
     client = _get_claude_client()
     model_cfg = _get_model_config()
@@ -432,6 +486,23 @@ def generate_insight(stories: list[dict]) -> str:
 
     insight = response.content[0].text.strip()
 
-    logger.info("Today's Insight 生成完了 (%d文字)", len(insight))
+    # 日本語コンテンツの検証
+    if not _contains_japanese(insight):
+        logger.warning("インサイトに日本語が含まれていません。再生成を試みます")
+        retry_message = (
+            "前回の出力が英語でした。必ず日本語で出力してください。\n"
+            "英語での出力は一切禁止です。\n\n"
+            + user_message
+        )
+        response = client.messages.create(
+            model=model_cfg["model"],
+            max_tokens=4096,
+            temperature=model_cfg["temperature"],
+            system=_INSIGHT_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": retry_message}],
+        )
+        insight = response.content[0].text.strip()
+
+    logger.info("本日のインサイト生成完了 (%d文字, 日本語: %s)", len(insight), _contains_japanese(insight))
 
     return insight

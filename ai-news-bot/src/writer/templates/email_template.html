@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
 <meta name="supported-color-schemes" content="light dark">
-<title>AI News Daily Digest - {{ date }}</title>
+<title>AI ニュース デイリーダイジェスト - {{ date }}</title>
 <style>
   /* ===== リセット & ベース ===== */
   body, table, td, a {
@@ -246,7 +246,7 @@
             <td align="center">
               <div style="font-size: 32px; margin-bottom: 8px;">&#x1F916;</div>
               <h1 class="header-title" style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">
-                AI News Daily Digest
+                AI ニュース デイリーダイジェスト
               </h1>
               <p class="header-subtitle" style="margin: 0; font-size: 15px; font-weight: 400;">
                 {{ date }} | AI&amp;テクノロジーの最前線
@@ -343,7 +343,7 @@
     </tr>
     {% endfor %}
 
-    <!-- ===== Today's Insight セクション ===== -->
+    <!-- ===== 本日のインサイト セクション ===== -->
     {% if insight %}
     <tr>
       <td class="content-padding" style="padding: 0 24px 24px 24px;">
@@ -351,7 +351,7 @@
           <tr>
             <td class="insight-section" style="padding: 20px; border-radius: 10px;">
               <h3 class="insight-title" style="margin: 0 0 10px 0; font-size: 17px; font-weight: 700;">
-                &#128161; Today's Insight
+                &#128161; 本日のインサイト
               </h3>
               <div class="insight-body" style="font-size: 14px; line-height: 1.8;">
                 {{ insight|safe }}
@@ -367,7 +367,7 @@
     <tr>
       <td class="footer-section" style="padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
         <p style="margin: 0 0 8px 0; font-size: 13px;">
-          AI News Collector Bot v1.0 | Powered by Claude API
+          AI ニュース Bot v1.0 | Claude API で自動生成
         </p>
         <p style="margin: 0; font-size: 12px;">
           &#12371;&#12398;&#12513;&#12540;&#12523;&#12399;&#33258;&#21205;&#37197;&#20449;&#12373;&#12428;&#12390;&#12356;&#12414;&#12377;&#12290;

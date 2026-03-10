@@ -277,7 +277,7 @@ def _build_summary_markdown(
     month_str = f"{year:04d}-{month:02d}"
 
     lines: list[str] = [
-        f"# AI News Monthly Summary - {month_str}",
+        f"# AIニュース 月次サマリー - {month_str}",
         "",
         f"> 生成日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "",
@@ -353,7 +353,7 @@ def _build_summary_markdown(
         "",
         "---",
         "",
-        f"_This summary was auto-generated for {month_str}._",
+        f"_このサマリーは {month_str} の記事データから自動生成されました。_",
     ])
 
     return "\n".join(lines)

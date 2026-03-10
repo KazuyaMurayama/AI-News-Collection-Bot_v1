@@ -11,7 +11,7 @@ app:
 collection:
   schedule_time: "06:00"
   timezone: "Asia/Tokyo"
-  num_stories: 3
+  num_stories: 5
   sources:
     - name: "TechCrunch AI"
       type: "rss"
@@ -91,7 +91,7 @@ collection:
 # --- Claude API 設定 ---
 claude:
   model: "claude-sonnet-4-20250514"
-  max_tokens: 4096
+  max_tokens: 8192
   temperature: 0.7
   scoring_temperature: 0.3
   # API キーは .env で管理: ANTHROPIC_API_KEY
@@ -104,7 +104,7 @@ selection:
     practicality: 5      # 実用性 (0-5)
     japan_relevance: 3   # 日本企業関連性 (0-3)
     freshness: 2         # 鮮度 (0-2)
-  select_count: 3
+  select_count: 5
   freshness_hours: 24
   dedup_similarity_threshold: 0.8
 
@@ -117,7 +117,7 @@ delivery:
     sender: "kazuya.murayama.21@gmail.com"
     recipients:
       - "kazuya.murayama.21@gmail.com"
-    subject_template: "[AI News] {date} - {headline} 他"
+    subject_template: "[AIニュース] {date} - {headline} 他"
     # SMTP 設定（auth_method: smtp の場合に使用）
     smtp:
       host: "smtp.gmail.com"

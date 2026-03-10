@@ -9,7 +9,7 @@ AI News Collector Bot の全モジュールを統合し、
     3. 中間 JSON 保存
     4. ストーリーテリング変換: select_framework() + transform_to_story()
     5. 自動タグ付け: auto_tag()
-    6. Today's Insight 生成: generate_insight()
+    6. 本日のインサイト 生成: generate_insight()
     7. Markdown 生成・保存: generate_daily_markdown() + save_markdown()
     8. Gmail 配信: GmailSender + apply_email_template() + send_daily_digest()
     9. LINE 配信（有効な場合）
@@ -54,14 +54,14 @@ def send_error_notification(error_message: str, logger: Any) -> None:
         sender = GmailSender()
         sender.authenticate()
 
-        subject = f"[AI News Bot] ERROR - {_today_jst()}"
+        subject = f"[AI ニュース Bot] エラー通知 - {_today_jst()}"
         html_body = (
             "<html><body>"
-            "<h2 style='color:#e53e3e;'>AI News Bot - Error Report</h2>"
-            f"<p><strong>Date:</strong> {_today_jst()}</p>"
+            "<h2 style='color:#e53e3e;'>AI ニュース Bot - エラーレポート</h2>"
+            f"<p><strong>日付:</strong> {_today_jst()}</p>"
             f"<pre style='background:#f7fafc;padding:16px;border-radius:8px;"
             f"overflow-x:auto;'>{error_message}</pre>"
-            "<p>Please check the logs for details.</p>"
+            "<p>詳細はログを確認してください。</p>"
             "</body></html>"
         )
 
@@ -132,7 +132,7 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
         fallback_story = {
             "id": 1,
             "title": "本日のAIニュースは取得できませんでした",
-            "source": "System",
+            "source": "システム",
             "url": "",
             "summary": "ニュースソースへのアクセスに問題が発生した可能性があります。",
             "body": (
@@ -171,6 +171,7 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
     stories: list[dict[str, Any]] = []
 
     from src.writer import select_framework, transform_to_story
+    from src.writer.storyteller import extract_title_and_body
 
     for idx, article in enumerate(selected_articles, start=1):
         try:
@@ -180,13 +181,18 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
             story_text = transform_to_story(article, framework=framework)
             logger.info("記事 %d: ストーリー変換完了 (%d 文字)", idx, len(story_text))
 
+            # 生成されたストーリーから日本語タイトルと本文を分離
+            ja_title, story_body = extract_title_and_body(story_text)
+            # 日本語タイトルが取得できた場合はそれを使用、できなければ元のタイトル
+            display_title = ja_title if ja_title else article.get("title", "無題")
+
             story_entry: dict[str, Any] = {
                 "id": idx,
-                "title": article.get("title", "無題"),
+                "title": display_title,
                 "source": article.get("source", ""),
                 "url": article.get("url", ""),
                 "summary": article.get("summary", ""),
-                "body": story_text,
+                "body": story_body if story_body else story_text,
                 "story": story_text,
                 "framework": framework,
                 "category": article.get("category", ""),
@@ -195,15 +201,22 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
             stories.append(story_entry)
         except Exception as e:
             logger.error("記事 %d のストーリー変換に失敗しました: %s", idx, e, exc_info=True)
-            # 変換に失敗した記事はそのまま含める
+            # 変換に失敗した記事は日本語のフォールバック本文で含める
+            original_title = article.get("title", "無題")
+            original_summary = article.get("summary", article.get("body", ""))
+            fallback_body = (
+                f"**{original_title}**\n\n"
+                f"※ この記事は自動翻訳・解説の生成に失敗したため、元の情報を表示しています。\n\n"
+                f"元記事の概要:\n{original_summary}"
+            )
             stories.append({
                 "id": idx,
-                "title": article.get("title", "無題"),
+                "title": f"【要確認】{original_title}",
                 "source": article.get("source", ""),
                 "url": article.get("url", ""),
-                "summary": article.get("summary", ""),
-                "body": article.get("summary", article.get("body", "")),
-                "story": article.get("summary", article.get("body", "")),
+                "summary": original_summary,
+                "body": fallback_body,
+                "story": fallback_body,
                 "framework": "",
                 "category": article.get("category", ""),
                 "tags": [],
@@ -228,15 +241,15 @@ def run_pipeline(target_date: str, dry_run: bool = False) -> None:
             story["tags"] = []
 
     # ------------------------------------------------------------------
-    # Step 6: Today's Insight 生成
+    # Step 6: 本日のインサイト 生成
     # ------------------------------------------------------------------
-    logger.info("--- Step 6: Today's Insight 生成 ---")
+    logger.info("--- Step 6: 本日のインサイト生成 ---")
     try:
         from src.writer import generate_insight
         insight = generate_insight(stories)
-        logger.info("Insight 生成完了 (%d 文字)", len(insight))
+        logger.info("インサイト生成完了 (%d 文字)", len(insight))
     except Exception as e:
-        logger.error("Insight 生成に失敗しました: %s", e, exc_info=True)
+        logger.error("インサイト生成に失敗しました: %s", e, exc_info=True)
         insight = "本日のインサイトは生成できませんでした。"
 
     # ------------------------------------------------------------------
@@ -425,7 +438,7 @@ def main(argv: list[str] | None = None) -> None:
     try:
         datetime.strptime(target_date, "%Y-%m-%d")
     except ValueError:
-        print(f"Error: 日付フォーマットが不正です: {target_date} (期待: YYYY-MM-DD)")
+        print(f"エラー: 日付フォーマットが不正です: {target_date} (期待: YYYY-MM-DD)")
         sys.exit(1)
 
     # ログ初期化（エラー通知用に先に取得）

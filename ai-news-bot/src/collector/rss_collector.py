@@ -73,8 +73,8 @@ def _extract_summary(entry: Any) -> str:
     text = text.strip()
 
     # 長すぎる概要を切り詰め
-    if len(text) > 500:
-        text = text[:497] + "..."
+    if len(text) > 1500:
+        text = text[:1497] + "..."
     return text
 
 
@@ -149,7 +149,7 @@ def collect_from_rss(
     logger.info("RSS 収集を開始します: %d ソース", len(sources))
 
     for source in sources:
-        source_name = source.get("name", "Unknown")
+        source_name = source.get("name", "不明")
         source_url = source.get("url", "")
         category = source.get("category", "")
         language = source.get("language", "en")

@@ -100,7 +100,7 @@ def generate_reaction_url(base_url: str, date: str, story_id: int, reaction_type
     Args:
         base_url: 未使用（互換性のために残す）。
         date: 記事の日付 (YYYY-MM-DD)。
-        story_id: ストーリー ID (1-3)。
+        story_id: ストーリー ID。
         reaction_type: リアクション種別 (excellent, good, so_so, read_later)。
 
     Returns:
@@ -112,12 +112,12 @@ def generate_reaction_url(base_url: str, date: str, story_id: int, reaction_type
     emoji = reaction_info["emoji"] if reaction_info else ""
     label = reaction_info["label"] if reaction_info else reaction_type
 
-    subject = f"[AI-NEWS-REACT] {date} / Story {story_id} / {reaction_type}"
+    subject = f"[AI-NEWS-REACT] {date} / 記事 {story_id} / {reaction_type}"
     body = (
         f"{emoji} 「{label}」と評価しました\n"
         f"\n"
         f"日付: {date}\n"
-        f"記事: Story {story_id}\n"
+        f"記事: 記事 {story_id}\n"
         f"評価: {label}\n"
         f"\n"
         f"※ このメールを送信するだけで評価が記録されます。"
@@ -201,7 +201,7 @@ def apply_email_template(
             - tags (list[str]): タグリスト
         base_url: フィードバックサーバーのベース URL。
             None の場合は config.yaml から取得を試みる。
-        insight: Today's Insight テキスト。None の場合は非表示。
+        insight: 本日のインサイト テキスト。None の場合は非表示。
 
     Returns:
         レンダリング済みの HTML メール文字列。

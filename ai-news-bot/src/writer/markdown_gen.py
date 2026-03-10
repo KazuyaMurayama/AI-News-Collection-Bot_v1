@@ -14,10 +14,10 @@ Frontmatter を付加する。
         source: "..."
         ...
     ---
-    # AI News - YYYY-MM-DD
-    ## Story 1: タイトル
+    # AI ニュース - YYYY-MM-DD
+    ## 記事 1: タイトル
     ...
-    ## Today's Insight
+    ## 本日のインサイト
     ...
 """
 
@@ -63,7 +63,7 @@ def _build_frontmatter_metadata(
     Args:
         date: 日付文字列 (YYYY-MM-DD)。
         stories: ストーリー情報のリスト。各要素は以下のキーを含む:
-            - id (int): ストーリーID (1-3)
+            - id (int): ストーリーID
             - title (str): タイトル
             - source (str): ソース名
             - url (str): 元記事URL
@@ -123,7 +123,7 @@ def _render_body(date: str, stories: list[dict], insight: str) -> str:
     Args:
         date: 日付文字列 (YYYY-MM-DD)。
         stories: ストーリー情報のリスト。各要素には body キーも含む。
-        insight: Today's Insight テキスト。
+        insight: 本日のインサイト テキスト。
 
     Returns:
         レンダリングされた Markdown 本文。
@@ -154,13 +154,13 @@ def _render_body_fallback(date: str, stories: list[dict], insight: str) -> str:
     Args:
         date: 日付文字列 (YYYY-MM-DD)。
         stories: ストーリー情報のリスト。
-        insight: Today's Insight テキスト。
+        insight: 本日のインサイト テキスト。
 
     Returns:
         生成された Markdown 本文。
     """
     lines: list[str] = []
-    lines.append(f"# AI News - {date}")
+    lines.append(f"# AI ニュース - {date}")
     lines.append("")
 
     for story in stories:
@@ -170,14 +170,14 @@ def _render_body_fallback(date: str, stories: list[dict], insight: str) -> str:
         url = story.get("url", "")
         body = story.get("body", "")
 
-        lines.append(f"## Story {story_id}: {title}")
+        lines.append(f"## 記事 {story_id}: {title}")
         lines.append("")
-        lines.append(f"> Source: [{source}]({url})")
+        lines.append(f"> 出典: [{source}]({url})")
         lines.append("")
         lines.append(body)
         lines.append("")
 
-    lines.append("## Today's Insight")
+    lines.append("## 本日のインサイト")
     lines.append("")
     lines.append(insight)
     lines.append("")
@@ -198,7 +198,7 @@ def generate_daily_markdown(
     Args:
         date: 日付文字列 (YYYY-MM-DD)。
         stories: ストーリー情報のリスト。各要素は以下のキーを含む:
-            - id (int): ストーリーID (1-3)
+            - id (int): ストーリーID
             - title (str): タイトル
             - source (str): ソース名
             - url (str): 元記事URL
@@ -207,7 +207,7 @@ def generate_daily_markdown(
             - rating (int | None): 評価スコア (null or 1-5)
             - reaction (str | None): リアクション種別 (null or type)
             - body (str): ストーリー本文
-        insight: Today's Insight テキスト。
+        insight: 本日のインサイト テキスト。
 
     Returns:
         YAML Frontmatter 付きの完全な Markdown 文字列。

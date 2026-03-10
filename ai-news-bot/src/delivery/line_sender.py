@@ -123,10 +123,10 @@ def format_for_line(stories: list[dict[str, Any]]) -> str:
         1000文字以内に収まるようにストーリー数を動的に調整する。
     """
     if not stories:
-        return "\n[AI News] 本日のAIニュースはありません。"
+        return "\n[AIニュース] 本日のAIニュースはありません。"
 
     lines: list[str] = []
-    lines.append("\n\U0001f916 AI News Daily Digest")
+    lines.append("\n\U0001f916 AI ニュース デイリーダイジェスト")
     lines.append("=" * 24)
 
     for story in stories:

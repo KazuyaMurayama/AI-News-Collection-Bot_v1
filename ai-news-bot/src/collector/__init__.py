@@ -7,7 +7,7 @@ Claude API による記事選定を行う。
 
     from src.collector import collect_all
 
-    # 全ソースから収集し、上位3件を選定
+    # 全ソースから収集し、上位5件を選定
     selected_articles = collect_all()
 
     # 収集のみ（選定なし）
@@ -129,7 +129,7 @@ def collect_all(
 
     # 選定件数の決定
     if num_articles is None:
-        num_articles = config.get("collection", {}).get("num_stories", 3)
+        num_articles = config.get("collection", {}).get("num_stories", 5)
 
     logger.info("=== ニュース収集パイプライン開始 ===")
 
